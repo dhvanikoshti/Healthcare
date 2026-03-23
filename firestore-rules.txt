@@ -1,0 +1,6 @@
+// Healthcare Firestore Security Rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow authenticated users read/write their own user doc
+    match
