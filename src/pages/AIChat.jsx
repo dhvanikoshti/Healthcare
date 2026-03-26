@@ -85,15 +85,15 @@ const AIChat = () => {
     <Layout>
       <div className="h-[calc(100vh-140px)] flex flex-col">
         {/* Header */}
-        <div className="rounded-3xl p-6 lg:p-8 mb-8 text-white  relative overflow-hidden" style={{ backgroundColor: '#263B6A' }}>
+        <div className="rounded-2xl sm:rounded-3xl p-3 sm:p-4 lg:p-8 mb-3 sm:mb-8 text-white relative overflow-hidden" style={{ backgroundColor: '#263B6A' }}>
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
           <div className="relative z-10">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
                 <h1 className="text-2xl lg:text-3xl font-bold mb-2">Health Assistant</h1>
-                <p className="text-cyan-100 text-lg">Your intelligent health companion, ready to help</p>
-                <div className="flex flex-wrap gap-3 mt-5">
+                <p className="text-cyan-100 text-xs sm:text-base lg:text-lg">Your intelligent health companion</p>
+                <div className="hidden sm:flex flex-wrap gap-2 lg:gap-3 mt-3 lg:mt-5">
                   <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/10">
                     <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                     <span className="text-sm font-medium">Online & Ready</span>
@@ -107,11 +107,11 @@ const AIChat = () => {
                 </div>
               </div>
 
-              {/* AI Assistant Icon + Clear Chat */}
-              <div className="flex items-center gap-4">
+              {/* AI Assistant Icon + Clear Chat - Hidden on mobile to save space */}
+              <div className="hidden sm:flex items-center gap-4">
                 {/* AI Status */}
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-                  <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center">
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 lg:p-4 border border-white/10">
+                  <div className="w-12 h-12 lg:w-16 lg:h-16 rounded-2xl bg-white/20 flex items-center justify-center">
                     <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
@@ -131,17 +131,17 @@ const AIChat = () => {
           {/* Chat Area */}
           <div className="flex-1 flex flex-col">
             {/* Messages */}
-            <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-white">
+            <div className="flex-1 p-3 sm:p-6 overflow-y-auto space-y-4 bg-white">
               {/* Welcome Message */}
               {messages.length === 1 && (
-                <div className="text-center py-8 sm:py-10">
-                  <div className="w-20 h-20 mx-auto mb-5 rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: '#263B6A' }}>
+                <div className="text-center py-4 sm:py-10">
+                  <div className="w-12 h-12 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-5 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: '#263B6A' }}>
                     <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-bold mb-2" style={{ color: '#263B6A' }}>How can I help you today?</h3>
-                  <p className="text-gray-500 mb-6 max-w-md mx-auto text-sm sm:text-base">Ask me anything about your health reports, get personalized advice, or learn about medical topics</p>
+                  <h3 className="text-lg sm:text-xl font-bold mb-2" style={{ color: '#263B6A' }}>How can I help you today?</h3>
+                  <p className="text-gray-500 mb-4 lg:mb-6 max-w-md mx-auto text-xs sm:text-base">Ask me anything about your health reports or get personalized advice</p>
                   <div className="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
                     {quickQuestions.map((question, index) => (
                       <button
@@ -162,8 +162,8 @@ const AIChat = () => {
                   <div className={`max-w-[75%] ${message.type === 'user' ? 'order-2' : 'order-1'} group-hover:bg-white/70 dark:group-hover:bg-gray-800/50 transition-colors duration-200 rounded-2xl p-2 -m-2`}>
                     <div className={`flex items-end gap-2.5 ${message.type === 'user' ? 'flex-row-reverse' : ''}`}>
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${message.type === 'ai'
-                          ? 'shadow-md'
-                          : ''
+                        ? 'shadow-md'
+                        : ''
                         }`} style={message.type === 'ai' ? { backgroundColor: '#263B6A' } : { backgroundColor: '#547792' }}>
                         {message.type === 'ai' ? (
                           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -174,8 +174,8 @@ const AIChat = () => {
                         )}
                       </div>
                       <div className={`px-4 sm:px-5 py-3 rounded-2xl shadow-sm ${message.type === 'user'
-                          ? 'text-white rounded-br-md'
-                          : 'text-gray-800 rounded-bl-md border'
+                        ? 'text-white rounded-br-md'
+                        : 'text-gray-800 rounded-bl-md border'
                         }`} style={message.type === 'user' ? { backgroundColor: '#547792' } : { backgroundColor: '#FFFFFF', borderColor: '#d4cfc7' }}>
                         <p className="text-sm sm:text-base leading-relaxed pr-8">{message.text}</p>
                         <button
@@ -252,11 +252,11 @@ const AIChat = () => {
                 </div>
                 <button
                   onClick={handleSend}
-                  className="px-6 py-4 font-semibold rounded-2xl hover:opacity-90 transition-colors shadow-md flex items-center gap-2 text-white"
+                  className="px-6 py-4 lg:px-10 lg:py-4 font-bold rounded-2xl hover:opacity-90 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center text-white active:scale-95"
                   style={{ backgroundColor: '#263B6A' }}
+                  title="Send Message"
                 >
-                  <span className="hidden sm:inline">Send</span>
-
+                  <span>Send</span>
                 </button>
               </div>
 

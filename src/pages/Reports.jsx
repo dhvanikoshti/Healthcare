@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
+import CustomSelect from '../components/CustomSelect';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { 
@@ -9,7 +10,6 @@ import {
 
 const Reports = () => {
   const [reports, setReports] = useState([]);
-  const [extractedData, setExtractedData] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -86,14 +86,12 @@ const Reports = () => {
       const snapshot = await getDocs(q);
       const fetchedReports = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setReports(fetchedReports);
-      
-      const storedData = localStorage.getItem('extractedMedicalData') ? JSON.parse(localStorage.getItem('extractedMedicalData')) : [];
-      setExtractedData(storedData);
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
       setIsLoading(false);
     }
+    console.log("kkkkk")
   }, []);
 
   useEffect(() => {
@@ -107,9 +105,8 @@ const Reports = () => {
 
 
   const processedReports = reports.map(report => {
-    const matchingData = extractedData.find(data => data.reportId === report.id);
-    const medicalData = matchingData?.medicalData || [];
-    const hemoglobinTests = medicalData.filter(t => t.testName.toLowerCase().includes('hemoglobin'))
+    const medicalData = report.medicalData || [];
+    const hemoglobinTests = medicalData.filter(t => t.testName?.toLowerCase().includes('hemoglobin'))
       .map(t => {
         const value = parseFloat(t.testValue);
         return isNaN(value) || !isFinite(value) ? null : value;
@@ -123,14 +120,14 @@ const Reports = () => {
 
     return {
       ...report,
-      category: 'Blood Test',
-      status: 'Analyzed',
+      category: report.category || 'Blood Test',
+      status: report.status || 'Analyzed',
       hemoglobin: avgHemoglobin,
       risks,
-      riskAssessment: risks > 0 ? `Detected ${risks} abnormal/borderline tests.` : 'All tests normal.',
-      diagnosis: risks > 0 ? 'Follow up recommended' : 'Normal results',
-      advice: risks > 0 ? 'Consult doctor for abnormal tests.' : 'Continue regular checkups.',
-      originalDocument: null // No PDF link available
+      riskAssessment: report.riskAssessment || (risks > 0 ? `Detected ${risks} abnormal/borderline tests.` : 'All tests normal.'),
+      diagnosis: report.diagnosis || (risks > 0 ? 'Follow up recommended' : 'Normal results'),
+      advice: report.advice || (risks > 0 ? 'Consult doctor for abnormal tests.' : 'Continue regular checkups.'),
+      originalDocument: null
     };
   });
 
@@ -153,7 +150,6 @@ const Reports = () => {
     };
     return colors[category] || '#64748b';
   };
-
   const filteredReports = processedReports.filter(report => {
     const matchesSearch = report.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || report.category === categoryFilter;
@@ -172,6 +168,19 @@ const Reports = () => {
 
     return matchesSearch && matchesCategory && matchesDate;
   });
+
+  const categoryOptions = [
+    { label: 'All Categories', value: 'all' },
+    ...categories.map(cat => ({ label: cat, value: cat }))
+  ];
+
+  const dateFilterOptions = [
+    { label: 'All Dates', value: 'all' },
+    { label: 'Last 7 days', value: 'week' },
+    { label: 'Last 30 days', value: 'month' },
+    { label: 'Last 3 months', value: '3months' },
+    { label: 'Custom Range', value: 'custom' }
+  ];
 
   const summaryStats = {
     total: filteredReports.length,
@@ -223,60 +232,60 @@ const Reports = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <select
-              className="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="all">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-            <select
-              className="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-            >
-              <option value="all">All Dates</option>
-              <option value="week">Last 7 days</option>
-              <option value="month">Last 30 days</option>
-              <option value="3months">Last 3 months</option>
-              <option value="custom">Custom Range</option>
-            </select>
-            {dateFilter === 'custom' && (
-              <div className="flex gap-2">
-                <input
-                  type="date"
-                  className="px-3 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                  value={dateRange.start}
-                  onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+            <div className="flex flex-col lg:flex-row items-center gap-3 w-full lg:w-auto">
+              <CustomSelect
+                options={categoryOptions}
+                value={categoryFilter}
+                onChange={(val) => setCategoryFilter(val)}
+                placeholder="All Categories"
+                className="w-full lg:w-56"
+              />
+              <div className="flex items-center gap-2 w-full lg:w-auto">
+                <CustomSelect
+                  options={dateFilterOptions}
+                  value={dateFilter}
+                  onChange={(val) => setDateFilter(val)}
+                  placeholder="All Dates"
+                  className="flex-1 lg:w-56"
                 />
-                <input
-                  type="date"
-                  className="px-3 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                  value={dateRange.end}
-                  onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                />
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-3 rounded-xl transition-all duration-200 ${viewMode === 'grid' ? 'bg-gray-800 text-white shadow-md scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                    title="Grid View"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-3 rounded-xl transition-all duration-200 ${viewMode === 'list' ? 'bg-gray-800 text-white shadow-md scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                    title="List View"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-            )}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-3 rounded-xl transition-colors ${viewMode === 'grid' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-3 rounded-xl transition-colors ${viewMode === 'list' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-              </button>
+
+              {dateFilter === 'custom' && (
+                <div className="flex gap-2 w-full sm:w-auto animate-fade-in">
+                  <input
+                    type="date"
+                    className="flex-1 sm:w-32 px-3 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs shadow-sm"
+                    value={dateRange.start}
+                    onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                  />
+                  <input
+                    type="date"
+                    className="flex-1 sm:w-32 px-3 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs shadow-sm"
+                    value={dateRange.end}
+                    onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -334,7 +343,7 @@ const Reports = () => {
             <p className="text-gray-500 text-lg">No reports found </p>
           </div>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredReports.map((report) => {
               const statusStyle = getStatusColor(report.status);
               const categoryColor = getCategoryColor(report.category);
@@ -417,8 +426,8 @@ const Reports = () => {
           </div>
         ) : (
           <div className="premium-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full min-w-[800px]">
                 <thead className="bg-white border-b border-gray-100">
                   <tr>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Report Name</th>
@@ -472,12 +481,12 @@ const Reports = () => {
                           <div className="flex gap-2">
                             <button
                               onClick={() => { setSelectedReport(report); setViewModal(true); }}
-                              className="p-2 text-gray-500 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
+                              className="p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
                               title="View"
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z" />
+                                <circle cx="12" cy="12" r="3" />
                               </svg>
                             </button>
                             <button

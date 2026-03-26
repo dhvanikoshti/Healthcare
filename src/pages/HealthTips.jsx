@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import Layout from '../components/Layout';
 
 // Fallback images for when external images fail to load
@@ -21,7 +21,7 @@ const HealthTips = () => {
   useEffect(() => {
     const fetchTips = async () => {
       try {
-        const q = query(collection(db, 'healthTips'), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, 'healthTips'), orderBy('createdAt', 'desc'), limit(12));
         const querySnapshot = await getDocs(q);
         const tips = [];
         querySnapshot.forEach((doc) => {

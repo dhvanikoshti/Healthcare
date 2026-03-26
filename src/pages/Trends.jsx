@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
+import CustomSelect from '../components/CustomSelect';
+import { db, auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 
 const TrendAnalysis = () => {
   const [compareOption, setCompareOption] = useState(null);
@@ -14,67 +18,57 @@ const TrendAnalysis = () => {
   const [selectedReports, setSelectedReports] = useState([]);
   const [compareReport1, setCompareReport1] = useState(null);
   const [compareReport2, setCompareReport2] = useState(null);
-
-  const multipleReportsData = [
-    {
-      reportId: 1,
-      reportName: 'Blood Test Report - July 2024',
-      reportDate: '2024-07-15',
-      medicalData: [
-        { testName: 'Hemoglobin', testValue: '13.5', units: 'g/dL', referenceRange: '12.0 - 16.0', status: 'Normal' },
-        { testName: 'Glucose', testValue: '95', units: 'mg/dL', referenceRange: '70 - 100', status: 'Normal' },
-        { testName: 'Cholesterol', testValue: '190', units: 'mg/dL', referenceRange: '< 200', status: 'Normal' },
-        { testName: 'Iron', testValue: '85', units: 'µg/dL', referenceRange: '60 - 170', status: 'Normal' },
-        { testName: 'Vitamin D', testValue: '35', units: 'ng/mL', referenceRange: '30 - 100', status: 'Normal' },
-      ]
-    },
-    {
-      reportId: 2,
-      reportName: 'Blood Test Report - June 2024',
-      reportDate: '2024-06-15',
-      medicalData: [
-        { testName: 'Hemoglobin', testValue: '12.8', units: 'g/dL', referenceRange: '12.0 - 16.0', status: 'Normal' },
-        { testName: 'Glucose', testValue: '102', units: 'mg/dL', referenceRange: '70 - 100', status: 'Borderline' },
-        { testName: 'Cholesterol', testValue: '205', units: 'mg/dL', referenceRange: '< 200', status: 'Borderline' },
-        { testName: 'Iron', testValue: '70', units: 'µg/dL', referenceRange: '60 - 170', status: 'Normal' },
-        { testName: 'Vitamin D', testValue: '28', units: 'ng/mL', referenceRange: '30 - 100', status: 'Borderline' },
-      ]
-    },
-    {
-      reportId: 3,
-      reportName: 'Blood Test Report - May 2024',
-      reportDate: '2024-05-15',
-      medicalData: [
-        { testName: 'Hemoglobin', testValue: '14.0', units: 'g/dL', referenceRange: '12.0 - 16.0', status: 'Normal' },
-        { testName: 'Glucose', testValue: '98', units: 'mg/dL', referenceRange: '70 - 100', status: 'Normal' },
-        { testName: 'Cholesterol', testValue: '180', units: 'mg/dL', referenceRange: '< 200', status: 'Normal' },
-        { testName: 'Iron', testValue: '90', units: 'µg/dL', referenceRange: '60 - 170', status: 'Normal' },
-        { testName: 'Vitamin D', testValue: '42', units: 'ng/mL', referenceRange: '30 - 100', status: 'Normal' },
-      ]
-    },
-  ];
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedReports = localStorage.getItem('userReports');
-    const storedMedicalData = localStorage.getItem('extractedMedicalData');
-
-    if (storedReports) {
-      const parsedReports = JSON.parse(storedReports);
-      setReports(parsedReports);
-      setHasReports(parsedReports.length > 0);
-      if (parsedReports.length === 1) {
-        setSelectedReport(parsedReports[0]);
-      }
-    }
-
-    if (storedMedicalData) {
-      setExtractedMedicalData(JSON.parse(storedMedicalData));
-    } else {
-      setExtractedMedicalData(multipleReportsData);
-      setReports(multipleReportsData.map(r => ({ id: r.reportId, name: r.reportName, date: r.reportDate })));
-      setHasReports(true);
-    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchUserReports(currentUser.uid);
+    } else if (auth.currentUser === null) {
+      setIsLoading(false);
+    }
+  }, [currentUser]);
+
+  const fetchUserReports = async (userId) => {
+    setIsLoading(true);
+    try {
+      const q = query(
+        collection(db, 'users', userId, 'reports'),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const fetchedReports = snapshot.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          reportId: d.id,
+          reportName: data.name || 'Unnamed Report',
+          reportDate: data.date || '',
+          medicalData: data.medicalData || []
+        };
+      });
+
+      setReports(fetchedReports);
+      setExtractedMedicalData(fetchedReports);
+      setHasReports(fetchedReports.length > 0);
+
+      if (fetchedReports.length === 1) {
+        setSelectedReport(fetchedReports[0]);
+      }
+    } catch (err) {
+      console.error('Error fetching user reports:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getSummaryStats = () => {
     if (extractedMedicalData.length === 0) return { totalTests: 0, normalTests: 0, borderlineTests: 0, abnormalTests: 0 };
@@ -232,6 +226,17 @@ const TrendAnalysis = () => {
 
     return { trendStatus, trendIcon, trendColor, changePercent };
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="w-16 h-16 border-4 border-cyan-100 border-t-cyan-600 rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-500 font-medium">Loading your reports...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   // Single report view
   if (hasReports && reports.length === 1) {
@@ -395,17 +400,15 @@ const TrendAnalysis = () => {
             {timeRange === 'custom' && (
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold text-gray-700">Select Number of Reports</label>
-                <select
+                <CustomSelect
+                  options={Array.from({ length: Math.max(2, reports.length) }, (_, i) => ({ 
+                    label: `${i + 1} ${i === 0 ? 'Report' : 'Reports'}`, 
+                    value: i + 1 
+                  }))}
                   value={customMonths}
-                  onChange={(e) => setCustomMonths(parseInt(e.target.value))}
-                  className="px-4 py-2.5 bg-gray-100 border-2 border-transparent rounded-xl font-medium text-gray-700 focus:outline-none focus:border-cyan-500 focus:bg-white transition-all duration-200"
-                >
-                  {Array.from({ length: Math.max(2, reports.length) }, (_, i) => i + 1).map(num => (
-                    <option key={num} value={num} disabled={num > reports.length}>
-                      {num} {num === 1 ? 'Report' : 'Reports'}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setCustomMonths(val)}
+                  placeholder="Select Number of Reports"
+                />
               </div>
             )}
 
@@ -414,33 +417,30 @@ const TrendAnalysis = () => {
               <div className="flex flex-col lg:flex-row gap-4 w-full lg:w-auto">
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-gray-700">First Report</label>
-                  <select
-                    value={compareReport1 || ''}
-                    onChange={(e) => setCompareReport1(e.target.value ? parseInt(e.target.value) : null)}
-                    className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-medium text-gray-700 focus:outline-none focus:border-cyan-500 focus:bg-white transition-all duration-200"
-                  >
-                    <option value="">Select Report</option>
-                    {extractedMedicalData.map((report, idx) => (
-                      <option key={idx} value={idx}>
-                        {report.reportName || `Report ${idx + 1}`} - {report.reportDate || ''}
-                      </option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    options={extractedMedicalData.map((report, idx) => ({
+                      label: `${report.reportName || `Report ${idx + 1}`} - ${report.reportDate || ''}`,
+                      value: idx
+                    }))}
+                    value={compareReport1}
+                    onChange={(val) => setCompareReport1(val)}
+                    placeholder="Select First Report"
+                    className="sm:w-[280px]"
+                  />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-gray-700">Second Report</label>
-                  <select
-                    value={compareReport2 || ''}
-                    onChange={(e) => setCompareReport2(e.target.value ? parseInt(e.target.value) : null)}
-                    className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-medium text-gray-700 focus:outline-none focus:border-cyan-500 focus:bg-white transition-all duration-200"
-                  >
-                    <option value="">Select Report</option>
-                    {extractedMedicalData.map((report, idx) => (
-                      <option key={idx} value={idx} disabled={idx === compareReport1}>
-                        {report.reportName || `Report ${idx + 1}`} - {report.reportDate || ''}
-                      </option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    options={extractedMedicalData.map((report, idx) => ({
+                      label: `${report.reportName || `Report ${idx + 1}`} - ${report.reportDate || ''}`,
+                      value: idx,
+                      disabled: idx === compareReport1
+                    }))}
+                    value={compareReport2}
+                    onChange={(val) => setCompareReport2(val)}
+                    placeholder="Select Second Report"
+                    className="sm:w-[280px]"
+                  />
                 </div>
               </div>
             )}

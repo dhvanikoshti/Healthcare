@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, getDocs, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 
 // Helper function to get initials from name
@@ -39,7 +39,7 @@ const Layout = ({ children }) => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
   // Get user data from Firestore
-  const [userData, setUserData] = useState({ name: '', email: '' });
+  const [userData, setUserData] = useState({ name: 'User', email: '', profileImage: null });
 
 
   useEffect(() => {
@@ -77,13 +77,22 @@ const Layout = ({ children }) => {
         }
 
         const userRef = doc(db, 'users', user.uid);
+        
+        // Update lastActive once upon authentication
+        updateDoc(userRef, { lastActive: serverTimestamp() }).catch(err => console.error("Error updating lastActive:", err));
+
         unsubscribeSnapshot = onSnapshot(userRef, (userSnap) => {
-          if (userSnap.exists()) {
-            const data = userSnap.data();
-            setUserData({ name: data.name, email: data.email, profileImage: data.profileImage });
-          } else {
-            setUserData({ name: (user.displayName || user.email?.split('@')[0] || 'User').charAt(0).toUpperCase() + (user.displayName || user.email?.split('@')[0] || 'User').slice(1).toLowerCase(), email: user.email || '' });
-          }
+          const data = userSnap.exists() ? userSnap.data() : {};
+          const fallbackName = (user.displayName || user.email?.split('@')[0] || 'User')
+            .split(/[._ ]/)
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(' ');
+
+          setUserData({
+            name: data.name || fallbackName,
+            email: data.email || user.email || '',
+            profileImage: data.profileImage || null
+          });
         });
       } else {
         if (unsubscribeSnapshot) unsubscribeSnapshot();
@@ -211,65 +220,17 @@ const Layout = ({ children }) => {
               </svg>
             </Link>
 
-            {/* Notifications */}
-            {/* <div className="relative">
-              <button 
-                onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative p-2.5 rounded-xl hover:bg-white/10 transition-colors"
-              >
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                  2
-                </span>
-              </button>
-
-              {notificationsOpen && (
-                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-50">
-                  <div className="px-5 py-4 border-b border-gray-100 bg-white flex items-center justify-between">
-                    <h3 className="font-bold text-gray-800">Notifications</h3>
-                    <button className="text-xs" style={{color: '#547792'}}>Mark all read</button>
-                  </div>
-                  <div className="max-h-80 overflow-y-auto">
-                    {notifications.map((notif) => (
-                      <div key={notif.id} className="px-5 py-4 border-b border-gray-50 hover:bg-white transition-colors cursor-pointer">
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{backgroundColor: '#FFFFFF'}}>
-                            <svg className="w-4 h-4" style={{color: '#263B6A'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={notif.icon} />
-                            </svg>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-700 truncate">{notif.message}</p>
-                            <p className="text-xs text-gray-400 mt-1">{notif.time}</p>
-                          </div>
-                          {notif.unread && (
-                            <div className="w-2 h-2 rounded-full" style={{backgroundColor: '#547792'}}></div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="px-5 py-3 bg-white border-t border-gray-100">
-                    <Link to="/notifications" className="block text-center text-sm" style={{color: '#547792'}}>
-                      View All Notifications
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div> */}
 
             {/* Profile */}
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center gap-3 p-1.5 pr-4 rounded-xl hover:bg-white/10 transition-colors"
+                className="flex items-center md:gap-3 p-0.5 md:p-1 md:pr-4 rounded-full hover:bg-white/10 transition-colors shrink-0 w-10 h-10 md:w-auto md:h-auto justify-center md:justify-start"
               >
                 {userData.profileImage ? (
-                  <img src={userData.profileImage} alt="Profile" className="w-9 h-9 rounded-xl object-cover" />
+                  <img src={userData.profileImage} alt="Profile" className="w-9 h-9 rounded-full object-cover shrink-0" />
                 ) : (
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#547792' }}>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0" style={{ backgroundColor: '#547792' }}>
                     {getInitials(userData.name)}
                   </div>
                 )}
@@ -287,9 +248,9 @@ const Layout = ({ children }) => {
                   <div className="px-5 py-4 bg-white border-b border-gray-100">
                     <div className="flex items-center gap-3">
                       {userData.profileImage ? (
-                        <img src={userData.profileImage} alt="Profile" className="w-12 h-12 rounded-xl object-cover" />
+                        <img src={userData.profileImage} alt="Profile" className="w-12 h-12 rounded-full object-cover shrink-0" />
                       ) : (
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold" style={{ backgroundColor: '#547792' }}>
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style={{ backgroundColor: '#547792' }}>
                           {getInitials(userData.name)}
                         </div>
                       )}
@@ -353,12 +314,10 @@ const Layout = ({ children }) => {
 
       {/* Mobile Sidebar - Slides in */}
       <aside
-        className={`lg:hidden fixed left-0 top-[60px] bottom-0 z-40 bg-white shadow-2xl border-r border-gray-200 w-72 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`lg:hidden fixed left-0 top-[60px] bottom-0 pt-4 z-40 bg-white shadow-2xl border-r border-gray-200 w-72 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
-        <div className="px-4 py-4 border-b border-gray-200">
 
-        </div>
         <div className="h-[calc(100%-70px)] overflow-y-auto py-4 px-3">
           <nav className="space-y-2">
             {menuItems.map((item) => (
@@ -405,7 +364,7 @@ const Layout = ({ children }) => {
       )}
 
       <main className={`pt-[60px] transition-all duration-300 ${mainMargin}`} style={{ backgroundColor: 'white' }}>
-        <div className="p-4 lg:p-6 xl:p-8" style={{ backgroundColor: 'white' }}>
+        <div className="p-4 sm:p-6 lg:p-10" style={{ backgroundColor: 'white' }}>
           {children}
         </div>
       </main>

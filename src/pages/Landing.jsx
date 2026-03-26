@@ -406,9 +406,9 @@ const Landing = () => {
         <div className="pt-12 pb-8 px-4">
           <div className="max-w-7xl mx-auto">
             {/* Top Section - 3 Column Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-10 mb-12">
               {/* Brand Column */}
-              <div>
+              <div className="col-span-2 md:col-span-1">
                 <div className="flex items-center gap-3 mb-5">
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: '#263B6A' }}>
                     <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

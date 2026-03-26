@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, orderBy, onSnapshot, deleteDoc, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase.js';
+import { db } from '../firebase.js';
 import Layout from '../components/Layout';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
+import CustomSelect from '../components/CustomSelect';
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ const Settings = () => {
   const [profileImage, setProfileImage] = useState(null);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const fileInputRef = useRef(null);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -47,16 +49,16 @@ const Settings = () => {
 
   useEffect(() => {
     const auth = getAuth();
-    let unsubscribeSessions = () => { };
+    let unsubscribeSessions = null;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          if (userDoc.exists()) {
-            const data = userDoc.data();
+        // Set up real-time listener for profile data
+        const docRef = doc(db, 'users', user.uid);
+        const fetchUser = async () => {
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
             setUserData({
               name: data.name || '',
               dob: data.dob || '',
@@ -68,74 +70,101 @@ const Settings = () => {
             });
             setProfileImage(data.profileImage || null);
           } else {
+            // Document doesn't exist, use fallback
             setUserData(prev => ({ ...prev, email: user.email }));
+            setProfileImage(null);
           }
+        };
+        fetchUser();
 
-          // Fetch active sessions
-          const sessionsQuery = query(
-            collection(db, 'users', user.uid, 'sessions'),
-            orderBy('loginTime', 'desc')
-          );
+        // Fetch active sessions
+        const sessionsQuery = query(
+          collection(db, 'users', user.uid, 'sessions'),
+          orderBy('loginTime', 'desc')
+        );
 
-          unsubscribeSessions = onSnapshot(sessionsQuery, (snapshot) => {
-            const sessionsList = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-            setActiveSessions(sessionsList);
-          });
-
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-        }
+        unsubscribeSessions = onSnapshot(sessionsQuery, (snapshot) => {
+          const sessionsList = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setActiveSessions(sessionsList);
+        });
       } else {
+        // Clean up listeners on logout
+        if (unsubscribeSessions) unsubscribeSessions();
         navigate('/login');
       }
     });
 
     return () => {
       unsubscribeAuth();
-      unsubscribeSessions();
+      if (unsubscribeSessions) unsubscribeSessions();
     };
   }, [navigate]);
 
-  const handleProfileImageUpload = (e) => {
+  const handleProfileImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 1048487) {
-        showToastMsg('Image must be under 1MB', 'error');
+      if (file.size > 2 * 1024 * 1024) {
+        showToastMsg('Image must be under 2MB', 'error');
         return;
       }
       setSelectedImageFile(file);
+      setIsUploading(true);
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result;
-        // Show the image instantly
-        setProfileImage(base64String);
-        setUserData(prev => ({ ...prev, profileImage: base64String }));
+      try {
+        // Show local preview immediately
+        const previewUrl = URL.createObjectURL(file);
+        setProfileImage(previewUrl);
+
+        // Upload to Cloudinary
+        const result = await uploadToCloudinary(file);
+        //console.log("Cloud URL : ", result);
+        const cloudUrl = result.secure_url;
+        console.log("Cloud URL : ", cloudUrl);
+
+        setProfileImage(cloudUrl);
+        setUserData(prev => ({ ...prev, profileImage: cloudUrl }));
 
         // Save to Firestore silently in the background
         const auth = getAuth();
         const user = auth.currentUser;
         if (user) {
-          setDoc(doc(db, 'users', user.uid), { profileImage: base64String }, { merge: true })
-            .catch(err => {
-              console.error('DB upload error:', err);
-              showToastMsg('Failed to save photo.', 'error');
-            });
+          await setDoc(doc(db, 'users', user.uid), { profileImage: cloudUrl }, { merge: true });
+          showToastMsg('Profile photo updated', 'success');
         }
-      };
-      reader.readAsDataURL(file);
+
+      } catch (err) {
+        console.error('Upload error:', err);
+        showToastMsg(err.message || 'Failed to upload photo.', 'error');
+        // Revert to old image if possible
+        setProfileImage(userData.profileImage);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
-  const handleRemoveProfileImage = () => {
+  const handleRemoveProfileImage = async () => {
     setProfileImage(null);
     setSelectedImageFile(null);
     setUserData(prev => ({ ...prev, profileImage: '' }));
     if (fileInputRef.current) fileInputRef.current.value = '';
     setIsFullImageView(false);
+
+    // Save to Firestore silently in the background
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        await setDoc(doc(db, 'users', user.uid), { profileImage: '' }, { merge: true });
+        showToastMsg('Profile photo removed', 'success');
+      } catch (err) {
+        console.error('Remove error:', err);
+        showToastMsg('Failed to remove photo.', 'error');
+      }
+    }
   };
 
   const handleChange = (e) => {
@@ -149,7 +178,8 @@ const Settings = () => {
     if (!user) return;
 
     let updatedUserData = { ...userData };
-    if (selectedImageFile && profileImage && profileImage.startsWith('data:image')) {
+    // Only update profileImage if it's NOT a temporary blob URL
+    if (profileImage && !profileImage.startsWith('blob:')) {
       updatedUserData.profileImage = profileImage;
     }
 
@@ -264,6 +294,7 @@ const Settings = () => {
     }
     setIsUpdating(false);
     setShowLogoutModal(false);
+    showToastMsg('Successfully logged out from all devices');
   };
 
   const getInitials = (name) => {
@@ -284,16 +315,16 @@ const Settings = () => {
 
       <div className="max-w-8xl mx-auto">
         {/* Header */}
-        <div className="rounded-3xl p-6 lg:p-8 mb-8 text-white  relative overflow-hidden" style={{ backgroundColor: '#263B6A' }}>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-          <div className="relative z-10">
-            <h1 className="text-2xl lg:text-3xl font-bold mb-2">Settings</h1>
-            <p className="text-cyan-100 text-lg">Manage your account and preferences</p>
+        <div className="rounded-3xl p-6 lg:p-10 mb-8 text-white relative overflow-hidden" style={{ backgroundColor: '#263B6A' }}>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+          <div className="relative z-10 text-center md:text-left">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Settings</h1>
+            <p className="text-cyan-100/90 text-lg">Manage your account and preferences</p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 custom-scrollbar no-scrollbar">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -321,7 +352,12 @@ const Settings = () => {
                     <button onClick={() => setIsEditing(false)} className="flex items-center justify-center w-10 h-10 bg-white hover:bg-gray-200 text-gray-700 rounded-full shadow-sm transition-all hover:scale-110" title="Cancel">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
-                    <button onClick={handleSave} className="flex items-center justify-center w-10 h-10 bg-gray-700 text-white rounded-full shadow-md transition-all hover:scale-110" title="Save Changes">
+                    <button
+                      onClick={handleSave}
+                      disabled={isUploading}
+                      className={`flex items-center justify-center w-10 h-10 bg-gray-700 text-white rounded-full shadow-md transition-all hover:scale-110 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title={isUploading ? "Uploading image..." : "Save Changes"}
+                    >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                     </button>
                   </>
@@ -332,17 +368,16 @@ const Settings = () => {
                 <div className="relative group z-10 mt-12 md:mt-0">
 
                   {profileImage ? (
-                    <div onClick={() => !isUploading && setIsFullImageView(true)} className="w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden shadow-md cursor-pointer ring-2 ring-gray-100 hover:ring-gray-300 transition-all bg-white relative">
+                    <div onClick={() => !isUploading && setIsFullImageView(true)} className="w-32 h-32 md:w-36 md:h-36 rounded-full overflow-hidden shadow-md cursor-pointer ring-2 ring-gray-100 hover:ring-gray-300 transition-all bg-white relative">
                       <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
                     </div>
                   ) : (
-                    <div className="w-32 h-32 md:w-36 md:h-36 rounded-2xl bg-white flex items-center justify-center text-gray-700 text-5xl font-bold shadow-sm ring-2 ring-gray-100">
+                    <div className="w-32 h-32 md:w-36 md:h-36 rounded-full bg-white flex items-center justify-center text-gray-700 text-5xl font-bold shadow-sm ring-2 ring-gray-100">
                       {getInitials(userData.name)}
                     </div>
                   )}
                   <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-2 -right-2 w-10 h-10 bg-gray-700 text-white rounded-full border-4 border-white flex items-center justify-center hover:bg-gray-800 shadow-lg transition-all transform hover:scale-105">
                     <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    <input type="file" className="hidden" accept="image/*" onChange={handleProfileImageUpload} ref={fileInputRef} />
                   </button>
 
                   {isEditing && profileImage && (
@@ -414,35 +449,43 @@ const Settings = () => {
                   )}
                 </div>
 
-                {/* Gender */}
                 <div className="bg-white p-1">
-                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                    Gender
-                  </label>
                   {isEditing ? (
-                    <select name="gender" value={userData.gender} onChange={handleChange} className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:bg-white transition-all text-gray-800">
-                      <option value="">Select gender</option>
-                      {genders.map(g => <option key={g} value={g}>{g}</option>)}
-                    </select>
+                    <CustomSelect
+                      label="Gender"
+                      options={genders}
+                      value={userData.gender}
+                      onChange={(val) => setUserData(prev => ({ ...prev, gender: val }))}
+                      placeholder="Select gender"
+                    />
                   ) : (
-                    <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.gender || 'Not set'}</p>
+                    <>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        Gender
+                      </label>
+                      <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.gender || 'Not set'}</p>
+                    </>
                   )}
                 </div>
 
-                {/* Blood Group */}
                 <div className="bg-white p-1">
-                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                    Blood Group
-                  </label>
                   {isEditing ? (
-                    <select name="bloodGroup" value={userData.bloodGroup} onChange={handleChange} className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:bg-white transition-all text-gray-800">
-                      <option value="">Select blood group</option>
-                      {bloodGroups.map(bg => <option key={bg} value={bg}>{bg}</option>)}
-                    </select>
+                    <CustomSelect
+                      label="Blood Group"
+                      options={bloodGroups}
+                      value={userData.bloodGroup}
+                      onChange={(val) => setUserData(prev => ({ ...prev, bloodGroup: val }))}
+                      placeholder="Select blood group"
+                    />
                   ) : (
-                    <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.bloodGroup || 'Not set'}</p>
+                    <>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                        Blood Group
+                      </label>
+                      <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.bloodGroup || 'Not set'}</p>
+                    </>
                   )}
                 </div>
               </div>
@@ -483,11 +526,19 @@ const Settings = () => {
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Current Password</label>
                         <div className="relative">
                           <input type={showPasswords.old ? "text" : "password"} value={passwordState.oldPassword} onChange={(e) => setPasswordState({ ...passwordState, oldPassword: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 outline-none pr-12" placeholder="Enter current password" />
-                          <button type="button" onClick={() => setShowPasswords({ ...showPasswords, old: !showPasswords.old })} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                          <button type="button" onClick={() => setShowPasswords({ ...showPasswords, old: !showPasswords.old })} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
                             {showPasswords.old ? (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268-2.943-9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                <line x1="2" x2="22" y1="2" y2="22" />
+                              </svg>
                             ) : (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
                             )}
                           </button>
                         </div>
@@ -497,11 +548,19 @@ const Settings = () => {
                         <label className="block text-sm font-semibold text-gray-700 mb-1">New Password</label>
                         <div className="relative">
                           <input type={showPasswords.new ? "text" : "password"} value={passwordState.newPassword} onChange={(e) => setPasswordState({ ...passwordState, newPassword: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 outline-none pr-12" placeholder="Enter new password" />
-                          <button type="button" onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                          <button type="button" onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
                             {showPasswords.new ? (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268-2.943-9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                <line x1="2" x2="22" y1="2" y2="22" />
+                              </svg>
                             ) : (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
                             )}
                           </button>
                         </div>
@@ -511,11 +570,19 @@ const Settings = () => {
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Confirm Password</label>
                         <div className="relative">
                           <input type={showPasswords.confirm ? "text" : "password"} value={passwordState.confirmPassword} onChange={(e) => setPasswordState({ ...passwordState, confirmPassword: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 outline-none pr-12" placeholder="Confirm new password" />
-                          <button type="button" onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                          <button type="button" onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
                             {showPasswords.confirm ? (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268-2.943-9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                <line x1="2" x2="22" y1="2" y2="22" />
+                              </svg>
                             ) : (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
                             )}
                           </button>
                         </div>
@@ -611,7 +678,7 @@ const Settings = () => {
         )}
 
         {/* Hidden File Input */}
-        <input type="file" ref={fileInputRef} onChange={handleProfileImageUpload} accept="image/*" className="hidden" />
+        <input type="file" ref={fileInputRef} onChange={handleProfileImageUpload} accept="image/*,.pdf" className="hidden" />
       </div>
 
       {/* Global Toast Notification */}

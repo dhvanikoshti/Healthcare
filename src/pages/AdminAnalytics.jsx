@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import AdminLayout from '../components/AdminLayout';
+import CustomSelect from '../components/CustomSelect';
 
 const riskCategoryData = [
   { id: 1, name: 'Diabetes', value: 245, color: '#dc2626', percentage: 12.5, level: 'High', trend: '+5%' },
@@ -97,10 +98,10 @@ const AdminAnalytics = () => {
     <AdminLayout>
       <div className="space-y-6">
         {/* Analytics Header */}
-        <div className="bg-gradient-to-r from-[#263B6A] to-[#547792] rounded-2xl p-6 md:p-8">
+        <div className="bg-gradient-to-r from-[#263B6A] to-[#547792] rounded-2xl p-6 lg:p-10">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white">System Analytics</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">System Analytics</h1>
               <p className="text-white/80 mt-2">Detailed health risk summary and user activity reports</p>
               <div className="flex items-center gap-4 mt-4">
                 <div className="flex items-center gap-2">
@@ -170,42 +171,46 @@ const AdminAnalytics = () => {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-3 mb-6 p-4 bg-white rounded-xl">
+          <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-gray-50/50 rounded-xl">
             {/* Search */}
-            <div className="flex-1 relative w-full md:w-auto">
+            <div className="flex-1 min-w-[200px] relative">
               <input
                 type="text"
-                placeholder="Search risk category..."
+                placeholder="Search risk categories..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#263B6A] transition-all text-sm"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#263B6A] transition-all shadow-sm"
               />
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
 
             {/* Level Filter */}
-            <select
+            <CustomSelect
+              options={[
+                { label: 'All Levels', value: 'all' },
+                { label: 'High', value: 'high' },
+                { label: 'Medium', value: 'medium' },
+                { label: 'Low', value: 'low' }
+              ]}
               value={riskFilter}
-              onChange={(e) => setRiskFilter(e.target.value)}
-              className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-[#263B6A] transition-all cursor-pointer text-sm min-w-[140px]"
-            >
-              <option value="all">All Levels</option>
-              <option value="high">High Risk</option>
-              <option value="medium">Medium Risk</option>
-              <option value="low">Low Risk</option>
-            </select>
+              onChange={(val) => setRiskFilter(val)}
+              placeholder="All Levels"
+              className="w-full sm:w-48"
+            />
 
             {/* Sort */}
-            <select
+            <CustomSelect
+              options={[
+                { label: 'High to Low', value: 'value-desc' },
+                { label: 'Low to High', value: 'value-asc' }
+              ]}
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-[#263B6A] transition-all cursor-pointer text-sm min-w-[160px]"
-            >
-              <option value="value-desc">Value (High to Low)</option>
-              <option value="value-asc">Value (Low to High)</option>
-            </select>
+              onChange={(val) => setSortBy(val)}
+              placeholder="Sort By"
+              className="w-full sm:w-48"
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -271,8 +276,8 @@ const AdminAnalytics = () => {
                     key={item.id}
                     onClick={() => setSelectedRisk(selectedRisk?.id === item.id ? null : item)}
                     className={`p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer group ${selectedRisk?.id === item.id
-                        ? 'border-[#263B6A] shadow-xl scale-[1.02]'
-                        : 'border-gray-100 hover:border-gray-300 hover:shadow-lg'
+                      ? 'border-[#263B6A] shadow-xl scale-[1.02]'
+                      : 'border-gray-100 hover:border-gray-300 hover:shadow-lg'
                       }`}
                     style={{
                       background: 'white'
@@ -350,17 +355,17 @@ const AdminAnalytics = () => {
           </div>
 
           {/* User Gender Distribution */}
-          <div className="bg-white rounded-2xl p-5 md:p-6 shadow-lg border border-gray-100">
-            <h2 className="text-xl font-bold text-gray-800 mb-6">User Gender Distribution</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-100">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-6">User Gender Distribution</h2>
+            <div className="grid grid-cols-3 gap-2 sm:gap-6">
               {genderData.map((item, index) => (
-                <div key={index} className="text-center p-5 bg-white border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors">
-                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-full mx-auto mb-4 flex items-center justify-center border border-gray-100" style={{ color: item.color }}>
-                    <svg className="w-8 h-8 md:w-10 md:h-10" style={{ color: item.color }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                <div key={index} className="text-center p-2 sm:p-5 bg-white border border-gray-100 rounded-xl sm:rounded-2xl hover:bg-gray-50 transition-colors">
+                  <div className="w-10 h-10 sm:w-20 sm:h-20 rounded-full mx-auto mb-2 sm:mb-4 flex items-center justify-center border border-gray-50 sm:border-gray-100" style={{ color: item.color }}>
+                    <svg className="w-5 h-5 sm:w-10 sm:h-10" style={{ color: item.color }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                   </div>
-                  <p className="text-2xl md:text-3xl font-bold text-gray-800">{item.value}</p>
-                  <p className="text-gray-500">{item.name}</p>
-                  <p className="text-sm font-semibold mt-1" style={{ color: item.color }}>{Math.round((item.value / 1247) * 100)}%</p>
+                  <p className="text-lg sm:text-3xl font-bold text-gray-800">{item.value}</p>
+                  <p className="text-[10px] sm:text-base text-gray-500 truncate">{item.name}</p>
+                  <p className="text-[10px] sm:text-sm font-semibold mt-0.5 sm:mt-1" style={{ color: item.color }}>{Math.round((item.value / 1247) * 100)}%</p>
                 </div>
               ))}
             </div>

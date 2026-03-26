@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import AdminLayout from '../components/AdminLayout';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, limit } from 'firebase/firestore';
 import { db } from '../firebase';
+import CustomSelect from '../components/CustomSelect';
 
 const riskData = [
   { name: 'Diabetes', count: 245, color: '#dc2626' },
@@ -40,7 +41,8 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         const usersRef = collection(db, 'users');
-        const querySnapshot = await getDocs(usersRef);
+        const q = query(usersRef, limit(500));
+        const querySnapshot = await getDocs(q);
 
         let total = 0;
         let active = 0;
@@ -51,11 +53,30 @@ const AdminDashboard = () => {
 
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          if (data.email === 'admin@gmail.com' || data.role === 'admin') return;
+          // Exclude any user with admin role or known admin emails
+          const isAdmin = data.role === 'admin' ||
+            (data.email && (
+              data.email === 'dhvanikoshti26@gmail.com' ||
+              data.email === 'admin@gmail.com'
+            ));
+          if (isAdmin) return;
 
           total++;
 
-          if (data.status === 'Inactive' || data.status === 'inactive') {
+          // Compute status dynamically: inactive if last active > 2 months ago
+          const twoMonthsAgo = new Date();
+          twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+          const lastActiveRaw = data.lastActive;
+          const lastActiveDate = lastActiveRaw?.toDate
+            ? lastActiveRaw.toDate()
+            : lastActiveRaw
+              ? new Date(lastActiveRaw)
+              : null;
+          const dynamicStatus = lastActiveDate && lastActiveDate < twoMonthsAgo
+            ? 'Inactive'
+            : 'Active';
+
+          if (dynamicStatus === 'Inactive') {
             inactive++;
           } else {
             active++;
@@ -196,18 +217,19 @@ const AdminDashboard = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-[#263B6A] to-[#547792] rounded-2xl p-6 ">
-          <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+        <div className="bg-gradient-to-r from-[#263B6A] to-[#547792] rounded-2xl p-6 lg:p-10">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Admin Dashboard</h1>
           <p className="text-white/80 mt-2">Welcome back! Here is your platform overview.</p>
           <div className="flex items-center gap-2 mt-4">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
             <span className="text-sm text-white/80">System Operational</span>
           </div>
+
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           {cards.map((c, i) => (
-            <div key={i} className="premium-card relative p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">
+            <div key={i} className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">
               {/* Soft Gradient Background Blob */}
               <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none" style={{ backgroundColor: c.bg }}></div>
 
@@ -227,7 +249,7 @@ const AdminDashboard = () => {
               </div>
 
               <div className="relative z-10 mt-4 lg:mt-5">
-                <p className="text-2xl lg:text-3xl font-bold text-gray-600 tracking-tight drop-shadow-sm">{c.value.toLocaleString()}</p>
+                <p className="text-xl lg:text-3xl font-bold text-gray-600 tracking-tight drop-shadow-sm tabular-nums">{c.value.toLocaleString()}</p>
                 <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">{c.title}</p>
               </div>
 
@@ -237,7 +259,7 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        <div className="premium-card p-6">
+        <div className="premium-card p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#547792] to-[#263B6A] flex items-center justify-center shadow-lg">
@@ -248,28 +270,40 @@ const AdminDashboard = () => {
                 <p className="text-sm text-gray-500">{mode === 'all' ? `Yearly totals comparison (${years.join(', ')})` : mode === 'compare' ? `Comparing ${year1} vs ${year2}` : `Monthly registrations in ${year1}`}</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex bg-white rounded-xl p-1 shadow-sm border border-gray-200">
-                <button onClick={() => setMode('single')} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'single' ? 'bg-[#547792] text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Single</button>
-                <button onClick={() => setMode('compare')} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'compare' ? 'bg-white text-[#547792] shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>Compare</button>
-                <button onClick={() => setMode('all')} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'all' ? 'bg-white text-[#547792] shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>All</button>
+            <div className="flex items-center gap-1.5 sm:gap-3">
+              <div className="flex bg-white rounded-xl p-0.5 sm:p-1 shadow-sm border border-gray-200">
+                <button onClick={() => setMode('single')} className={`px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'single' ? 'bg-[#547792] text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Single</button>
+                <button onClick={() => setMode('compare')} className={`px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'compare' ? 'bg-white text-[#547792] shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>Compare</button>
+                <button onClick={() => setMode('all')} className={`px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'all' ? 'bg-white text-[#547792] shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>All</button>
               </div>
 
               {mode === 'single' && (
-                <select value={year1} onChange={e => setYear1(parseInt(e.target.value))} className="px-4 py-2 border-2 border-gray-200 rounded-lg text-sm font-medium focus:border-[#547792] focus:outline-none bg-white">
-                  {years.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
+                <CustomSelect
+                  options={years.map(y => ({ label: y.toString(), value: y }))}
+                  value={year1}
+                  onChange={(val) => setYear1(val)}
+                  placeholder="Year"
+                  className="w-28 sm:w-32"
+                />
               )}
 
               {mode === 'compare' && (
-                <div className="flex items-center gap-2">
-                  <select value={year1} onChange={e => setYear1(parseInt(e.target.value))} className="px-4 py-2 border-2 border-gray-200 rounded-lg text-sm font-medium focus:border-[#547792] focus:outline-none bg-white">
-                    {years.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                  <span className="text-gray-400 font-medium">vs</span>
-                  <select value={year2} onChange={e => setYear2(parseInt(e.target.value))} className="px-4 py-2 border-2 border-gray-200 rounded-lg text-sm font-medium focus:border-[#263B6A] focus:outline-none bg-white">
-                    {years.filter(y => y !== year1).map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  <CustomSelect
+                    options={years.map(y => ({ label: y.toString(), value: y }))}
+                    value={year1}
+                    onChange={(val) => setYear1(val)}
+                    placeholder="Year 1"
+                    className="w-28 sm:w-32"
+                  />
+                  <span className="text-gray-400 font-medium text-xs sm:text-sm">vs</span>
+                  <CustomSelect
+                    options={years.filter(y => y !== year1).map(y => ({ label: y.toString(), value: y }))}
+                    value={year2}
+                    onChange={(val) => setYear2(val)}
+                    placeholder="Year 2"
+                    className="w-28 sm:w-32"
+                  />
                 </div>
               )}
             </div>

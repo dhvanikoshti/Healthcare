@@ -5,6 +5,8 @@ import { doc, getDoc, setDoc, collection, query, orderBy, onSnapshot, deleteDoc,
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase.js';
 import AdminLayout from '../components/AdminLayout';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
+import CustomSelect from '../components/CustomSelect';
 
 const AdminSettings = () => {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ const AdminSettings = () => {
   const [profileImage, setProfileImage] = useState(null);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const fileInputRef = useRef(null);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -46,106 +49,99 @@ const AdminSettings = () => {
   });
 
   useEffect(() => {
-    const auth = getAuth();
-    let unsubscribeSessions = () => { };
-
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+    const auth = onAuthStateChanged(getAuth(), async (user) => {
       if (user) {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          let isAdmin = false;
-          let data = {};
-
-          if (userDoc.exists()) {
-            data = userDoc.data();
-            if (data.role === 'admin') {
-              isAdmin = true;
-            }
-          }
-
-          if (user.email && user.email.toLowerCase() === 'admin@gmail.com') {
-            isAdmin = true;
-          }
-
-          if (!isAdmin) {
-            console.warn('Unauthorized access: User is not an admin.');
-            navigate('/dashboard');
-            return;
-          }
-
-          if (userDoc.exists()) {
+        // Set up real-time listener for profile data
+        const docRef = doc(db, 'users', user.uid);
+        const fetchUser = async () => {
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
             setUserData({
-              name: data.name || '',
+              name: data.name || (user.email === 'dhvanikoshti26@gmail.com' ? 'Dhvani Koshti' : 'Admin'),
               dob: data.dob || '',
               gender: data.gender || '',
               bloodGroup: data.bloodGroup || '',
               contactNumber: data.contactNumber || '',
-              email: user.email || '',
-              profileImage: data.profileImage || ''
+              email: user.email || 'admin@healthcare.com',
+              profileImage: data.profileImage || null
             });
             setProfileImage(data.profileImage || null);
           } else {
-            setUserData(prev => ({ ...prev, email: user.email, name: 'Admin User' }));
-          }
-
-          // Fetch active sessions
-          const sessionsQuery = query(
-            collection(db, 'users', user.uid, 'sessions'),
-            orderBy('loginTime', 'desc')
-          );
-
-          unsubscribeSessions = onSnapshot(sessionsQuery, (snapshot) => {
-            const sessionsList = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
+            // Document doesn't exist, use fallbacks
+            setUserData(prev => ({
+              ...prev,
+              email: user.email,
+              name: user.email === 'dhvanikoshti26@gmail.com' ? 'Dhvani Koshti' : 'Admin User',
+              profileImage: ''
             }));
-            setActiveSessions(sessionsList);
-          });
+            setProfileImage(null);
+          }
+        };
+        fetchUser();
 
-        } catch (error) {
-          console.error('Error fetching admin data:', error);
-        }
+        // Fetch active sessions
+        const sessionsQuery = query(
+          collection(db, 'users', user.uid, 'sessions'),
+          orderBy('loginTime', 'desc')
+        );
+
+        const unsubscribeSessions = onSnapshot(sessionsQuery, (snapshot) => {
+          const sessionsList = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setActiveSessions(sessionsList);
+        });
+
+        return () => {
+          unsubscribeSessions();
+        };
       } else {
         navigate('/login');
       }
     });
 
-    return () => {
-      unsubscribeAuth();
-      unsubscribeSessions();
-    };
+    return () => auth();
   }, [navigate]);
 
-  const handleProfileImageUpload = (e) => {
+  const handleProfileImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 1048487) {
-        showToastMsg('Image must be under 1MB', 'error');
+      if (file.size > 2 * 1024 * 1024) {
+        showToastMsg('Image must be under 2MB', 'error');
         return;
       }
       setSelectedImageFile(file);
+      setIsUploading(true);
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result;
-        // Show the image instantly
-        setProfileImage(base64String);
-        setUserData(prev => ({ ...prev, profileImage: base64String }));
+      try {
+        // Show local preview immediately
+        const previewUrl = URL.createObjectURL(file);
+        setProfileImage(previewUrl);
+
+        // Upload to Cloudinary
+        const result = await uploadToCloudinary(file);
+        const cloudUrl = result.secure_url;
+
+        setProfileImage(cloudUrl);
+        setUserData(prev => ({ ...prev, profileImage: cloudUrl }));
 
         // Save to Firestore silently in the background
         const auth = getAuth();
         const user = auth.currentUser;
         if (user) {
-          setDoc(doc(db, 'users', user.uid), { profileImage: base64String }, { merge: true })
-            .catch(err => {
-              console.error('DB upload error:', err);
-              showToastMsg('Failed to save photo.', 'error');
-            });
+          await setDoc(doc(db, 'users', user.uid), { profileImage: cloudUrl }, { merge: true });
+          showToastMsg('Profile photo updated', 'success');
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.error('Upload error:', err);
+        showToastMsg(err.message || 'Failed to upload photo.', 'error');
+        // Revert to old image if possible
+        setProfileImage(userData.profileImage);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -168,7 +164,7 @@ const AdminSettings = () => {
     if (!user) return;
 
     let updatedUserData = { ...userData };
-    if (selectedImageFile && profileImage && profileImage.startsWith('data:image')) {
+    if (profileImage) {
       updatedUserData.profileImage = profileImage;
     }
 
@@ -262,7 +258,7 @@ const AdminSettings = () => {
   };
 
   const handleLogoutAll = async () => {
-    setIsUploading(true); // Using isUploading as a general loading state for logout
+    setIsUpdating(true);
     try {
       const auth = getAuth();
       const user = auth.currentUser;
@@ -281,8 +277,9 @@ const AdminSettings = () => {
       console.error('Error logging out from all devices:', error);
       showToastMsg('Failed to logout from all devices', 'error');
     }
-    setIsUploading(false);
+    setIsUpdating(false);
     setShowLogoutModal(false);
+    showToastMsg('Successfully logged out from all devices');
   };
 
   const getInitials = (name) => {
@@ -298,22 +295,25 @@ const AdminSettings = () => {
   const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
   const genders = ['Male', 'Female', 'Other'];
 
+  const genderOptions = genders.map(g => ({ label: g, value: g }));
+  const bloodGroupOptions = bloodGroups.map(bg => ({ label: bg, value: bg }));
+
   return (
     <AdminLayout>
 
       <div>
         {/* Header */}
-        <div className="rounded-3xl p-6 lg:p-8 mb-8 text-white  relative overflow-hidden" style={{ backgroundColor: '#263B6A' }}>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-          <div className="relative z-10">
-            <h1 className="text-2xl lg:text-3xl font-bold mb-2">Admin Settings</h1>
-            <p className="text-gray-300 text-lg">Manage your account and preferences</p>
+        <div className="rounded-3xl p-6 lg:p-10 mb-8 text-white relative overflow-hidden" style={{ backgroundColor: '#263B6A' }}>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"></div>
+          <div className="relative z-10 text-center md:text-left">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Admin Settings</h1>
+            <p className="text-cyan-100/90 text-lg">Manage your account and preferences</p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 custom-scrollbar no-scrollbar">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -357,11 +357,11 @@ const AdminSettings = () => {
                 <div className="relative group z-10 mt-12 md:mt-0">
 
                   {profileImage ? (
-                    <div onClick={() => !isUploading && setIsFullImageView(true)} className="w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden shadow-md cursor-pointer ring-2 ring-gray-100 hover:ring-gray-300 transition-all bg-white relative">
+                    <div onClick={() => !isUploading && setIsFullImageView(true)} className="w-32 h-32 md:w-36 md:h-36 rounded-full overflow-hidden shadow-md cursor-pointer ring-2 ring-gray-100 hover:ring-gray-300 transition-all bg-white relative">
                       <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
                     </div>
                   ) : (
-                    <div className="w-32 h-32 md:w-36 md:h-36 rounded-2xl bg-white border-2 border-gray-100 flex items-center justify-center text-gray-700 text-5xl font-bold shadow-sm">
+                    <div className="w-32 h-32 md:w-36 md:h-36 rounded-full bg-white border-2 border-gray-100 flex items-center justify-center text-gray-700 text-5xl font-bold shadow-sm">
                       {getInitials(userData.name)}
                     </div>
                   )}
@@ -414,10 +414,12 @@ const AdminSettings = () => {
                 <div className="bg-white p-1">
                   <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide"><svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>Gender</label>
                   {isEditing ? (
-                    <select name="gender" value={userData.gender} onChange={handleChange} className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:bg-white object-contain block">
-                      <option value="">Select gender</option>
-                      {genders.map(g => <option key={g} value={g}>{g}</option>)}
-                    </select>
+                    <CustomSelect
+                      options={genderOptions}
+                      value={userData.gender}
+                      onChange={(val) => setUserData(prev => ({ ...prev, gender: val }))}
+                      placeholder="Select gender"
+                    />
                   ) : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.gender || 'Not set'}</p>}
                 </div>
 
@@ -425,10 +427,12 @@ const AdminSettings = () => {
                 <div className="bg-white p-1">
                   <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide"><svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>Blood Group</label>
                   {isEditing ? (
-                    <select name="bloodGroup" value={userData.bloodGroup} onChange={handleChange} className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:bg-white object-contain block">
-                      <option value="">Select blood group</option>
-                      {bloodGroups.map(bg => <option key={bg} value={bg}>{bg}</option>)}
-                    </select>
+                    <CustomSelect
+                      options={bloodGroupOptions}
+                      value={userData.bloodGroup}
+                      onChange={(val) => setUserData(prev => ({ ...prev, bloodGroup: val }))}
+                      placeholder="Select blood group"
+                    />
                   ) : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.bloodGroup || 'Not set'}</p>}
                 </div>
               </div>
@@ -548,7 +552,7 @@ const AdminSettings = () => {
                             )}
                           </div>
                           <p className="text-xs text-gray-500">
-                             {session.loginTime?.toDate().toLocaleString()}
+                            {session.loginTime?.toDate().toLocaleString()}
                           </p>
                         </div>
                       </div>
@@ -597,7 +601,7 @@ const AdminSettings = () => {
         )}
 
         {/* Hidden File Input */}
-        <input type="file" ref={fileInputRef} onChange={handleProfileImageUpload} accept="image/*" className="hidden" />
+        <input type="file" ref={fileInputRef} onChange={handleProfileImageUpload} accept="image/*,.pdf" className="hidden" />
       </div>
 
       {/* Global Toast Notification */}

@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { updateProfile } from "firebase/auth";
-import { auth } from '../firebase';
-import { db } from '../firebase';
-import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth, db } from '../firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getSystemFingerprint, getSystemName, getBrowserName } from '../utils/deviceFingerprint';
+import CustomSelect from '../components/CustomSelect';
 
 
 const Register = () => {
@@ -85,7 +84,7 @@ const Register = () => {
         const systemId = getSystemFingerprint();
         const systemName = getSystemName();
         const browserName = getBrowserName();
-        
+
         // Use a stable sessionId or generate a new one if it's a new system
         const sessionId = Math.random().toString(36).substring(2, 15);
         localStorage.setItem('currentSessionId', sessionId);
@@ -204,24 +203,28 @@ const Register = () => {
                 <input id="dob" type="date" {...formik.getFieldProps('dob')} className={inputClasses} />
                 {formik.touched.dob && formik.errors.dob ? <div className={errorClasses}>{formik.errors.dob}</div> : null}
               </div>
-              <div>
-                <label htmlFor="gender" className={labelClasses}>Gender</label>
-                <select id="gender" {...formik.getFieldProps('gender')} className={inputClasses}>
-                  <option value="">Select gender</option>
-                  {genders.map((gender) => <option key={gender} value={gender}>{gender}</option>)}
-                </select>
-                {formik.touched.gender && formik.errors.gender ? <div className={errorClasses}>{formik.errors.gender}</div> : null}
+              <div className="flex-1 w-full">
+                <CustomSelect
+                  label="Gender"
+                  options={genders}
+                  value={formik.values.gender}
+                  onChange={(value) => formik.setFieldValue('gender', value)}
+                  placeholder="Select gender"
+                  error={formik.touched.gender && formik.errors.gender}
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              <div>
-                <label htmlFor="bloodGroup" className={labelClasses}>Blood Group</label>
-                <select id="bloodGroup" {...formik.getFieldProps('bloodGroup')} className={inputClasses}>
-                  <option value="">Select blood group</option>
-                  {bloodGroups.map((bg) => <option key={bg} value={bg}>{bg}</option>)}
-                </select>
-                {formik.touched.bloodGroup && formik.errors.bloodGroup ? <div className={errorClasses}>{formik.errors.bloodGroup}</div> : null}
+              <div className="flex-1 w-full">
+                <CustomSelect
+                  label="Blood Group"
+                  options={bloodGroups}
+                  value={formik.values.bloodGroup}
+                  onChange={(value) => formik.setFieldValue('bloodGroup', value)}
+                  placeholder="Select blood group"
+                  error={formik.touched.bloodGroup && formik.errors.bloodGroup}
+                />
               </div>
               <div>
                 <label htmlFor="contactNumber" className={labelClasses}>Contact Number</label>
@@ -343,5 +346,6 @@ const Register = () => {
     </div>
   );
 };
+
 
 export default Register;

@@ -16,6 +16,7 @@ import AdminUsers from './pages/AdminUsers';
 import AdminAnalytics from './pages/AdminAnalytics';
 import AdminHealthTips from './pages/AdminHealthTips';
 import AdminSettings from './pages/AdminSettings';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -24,24 +25,26 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/upload" element={<UploadReport />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/trends" element={<Trends />} />
-        <Route path="/health-insights" element={<HealthInsights />} />
-        <Route path="/risk" element={<HealthInsights />} />
-        <Route path="/diagnosis" element={<HealthInsights />} />
-        <Route path="/chat" element={<AIChat />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/health-tips" element={<HealthTips />} />
-        <Route path="/health-tips/:id" element={<HealthTipDetail />} />
+        {/* User Routes */}
+        <Route path="/dashboard" element={<ProtectedRoute requiredRole="user"><Dashboard /></ProtectedRoute>} />
+        <Route path="/upload" element={<ProtectedRoute requiredRole="user"><UploadReport /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute requiredRole="user"><Reports /></ProtectedRoute>} />
+        <Route path="/trends" element={<ProtectedRoute requiredRole="user"><Trends /></ProtectedRoute>} />
+        <Route path="/health-insights" element={<ProtectedRoute requiredRole="user"><HealthInsights /></ProtectedRoute>} />
+        <Route path="/risk" element={<ProtectedRoute requiredRole="user"><HealthInsights /></ProtectedRoute>} />
+        <Route path="/diagnosis" element={<ProtectedRoute requiredRole="user"><HealthInsights /></ProtectedRoute>} />
+        <Route path="/chat" element={<ProtectedRoute requiredRole="user"><AIChat /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute requiredRole="user"><Settings /></ProtectedRoute>} />
+        <Route path="/health-tips" element={<ProtectedRoute><HealthTips /></ProtectedRoute>} />
+        <Route path="/health-tips/:id" element={<ProtectedRoute><HealthTipDetail /></ProtectedRoute>} />
         
         {/* Admin Routes */}
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/admin/analytics" element={<AdminAnalytics />} />
-        <Route path="/admin/health-tips" element={<AdminHealthTips />} />
-        <Route path="/admin/settings" element={<AdminSettings />} />
+        <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
+        <Route path="/admin/analytics" element={<ProtectedRoute requiredRole="admin"><AdminAnalytics /></ProtectedRoute>} />
+        <Route path="/admin/health-tips" element={<ProtectedRoute requiredRole="admin"><AdminHealthTips /></ProtectedRoute>} />
+        <Route path="/admin/settings" element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
+
       </Routes>
     </Router>
   );

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 
-import { doc, getDoc, onSnapshot, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, getDocs, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { db } from '../firebase';
 
@@ -11,6 +11,7 @@ const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isFullImageView, setIsFullImageView] = useState(false);
   const profileRef = useRef(null);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ const AdminLayout = ({ children }) => {
   }, []);
 
   const [activeMenu, setActiveMenu] = useState('/admin/dashboard');
-  const [userData, setUserData] = useState({ name: '', email: '', profileImage: null });
+  const [userData, setUserData] = useState({ name: 'Admin', email: '', profileImage: null });
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
   useEffect(() => {
@@ -36,7 +37,6 @@ const AdminLayout = ({ children }) => {
   useEffect(() => {
     // Subscribe to accurate Firestore data
     const auth = getAuth();
-    let unsubscribeSnapshot = null;
     let unsubscribeSessions = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -58,21 +58,27 @@ const AdminLayout = ({ children }) => {
         }
 
         const docRef = doc(db, 'users', user.uid);
-        unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setUserData({ name: data.name || 'Admin', email: user.email || 'admin@healthcare.com', profileImage: data.profileImage || null });
-          }
-        });
+
+        // Update lastActive once upon authentication
+        updateDoc(docRef, { lastActive: serverTimestamp() }).catch(err => console.error("Error updating admin lastActive:", err));
+
+        const fetchUser = async () => {
+          const docSnap = await getDoc(docRef);
+          const data = docSnap.exists() ? docSnap.data() : {};
+          setUserData({
+            name: data.name || (user.email === 'dhvanikoshti26@gmail.com' ? 'Dhvani Koshti' : 'Admin'),
+            email: user.email || data.email || 'admin@healthcare.com',
+            profileImage: data.profileImage || null
+          });
+        };
+        fetchUser();
       } else {
-        if (unsubscribeSnapshot) unsubscribeSnapshot();
         if (unsubscribeSessions) unsubscribeSessions();
       }
     });
 
     return () => {
       unsubscribeAuth();
-      if (unsubscribeSnapshot) unsubscribeSnapshot();
       if (unsubscribeSessions) unsubscribeSessions();
     };
   }, []);
@@ -106,7 +112,7 @@ const AdminLayout = ({ children }) => {
     { name: 'User Management', path: '/admin/users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', iconBg: '#8b5cf6' },
     { name: 'System Analytics', path: '/admin/analytics', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', iconBg: '#10b981' },
     { name: 'Health Tips', path: '/admin/health-tips', icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z', iconBg: '#ec4899' },
-    { name: 'My Profile', path: '/admin/settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z', iconBg: '#64748b' },
+    { name: 'My Profile', path: '/admin/settings', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', iconBg: '#64748b' },
   ];
 
   const sidebarWidth = sidebarCollapsed ? 'w-20' : 'w-72';
@@ -148,11 +154,11 @@ const AdminLayout = ({ children }) => {
           </div>
           <div className="flex items-center gap-2 lg:gap-4">
             <div className="relative" ref={profileRef}>
-              <button onClick={() => setProfileOpen(!profileOpen)} className="flex items-center gap-3 p-1.5 pr-4 rounded-xl hover:bg-white/10 transition-colors">
+              <button onClick={() => setProfileOpen(!profileOpen)} className="flex items-center md:gap-3 p-0.5 md:p-1 md:pr-4 rounded-full hover:bg-white/10 transition-colors shrink-0 w-10 h-10 md:w-auto md:h-auto justify-center md:justify-start">
                 {userData.profileImage ? (
-                  <img src={userData.profileImage} alt="Admin" className="w-9 h-9 rounded-xl object-cover" />
+                  <img src={userData.profileImage} alt="Admin" className="w-9 h-9 rounded-full object-cover shrink-0" />
                 ) : (
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#547792' }}>{getFirstLetter(userData.name)}</div>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0" style={{ backgroundColor: '#547792' }}>{getFirstLetter(userData.name)}</div>
                 )}
                 <div className="hidden md:block text-left">
                   <p className="text-sm font-semibold text-white">{userData.name || 'Admin'}</p>
@@ -164,14 +170,19 @@ const AdminLayout = ({ children }) => {
                   <div className="px-5 py-4 bg-white border-b border-gray-100">
                     <div className="flex items-center gap-3">
                       {userData.profileImage ? (
-                        <img src={userData.profileImage} alt="Admin" className="w-12 h-12 rounded-xl object-cover" />
+                        <div onClick={() => setIsFullImageView(true)} className="w-12 h-12 rounded-full overflow-hidden cursor-pointer ring-2 ring-gray-100 hover:ring-[#263B6A] transition-all shrink-0">
+                          <img src={userData.profileImage} alt="Admin" className="w-full h-full object-cover rounded-full" />
+                        </div>
                       ) : (
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold" style={{ backgroundColor: '#547792' }}>{getFirstLetter(userData.name)}</div>
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style={{ backgroundColor: '#547792' }}>{getFirstLetter(userData.name)}</div>
                       )}
-                      <div><p className="font-bold text-gray-800">{userData.name || 'Admin'}</p><p className="text-sm text-gray-500">{userData.email || 'admin@gmail.com'}</p></div>
+                      <div>
+                        <p className="font-bold text-gray-800">{userData.name || 'Admin'}</p>
+                        <p className="text-sm text-gray-500">{userData.email || 'admin@healthcare.com'}</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="py-2"><Link to="/admin/settings" className="w-full px-5 py-3 text-left text-sm text-gray-600 hover:bg-white flex items-center gap-3">My Profile</Link></div>
+                  <div className="py-2"><button onClick={() => { setProfileOpen(false); navigate('/admin/settings'); }} className="w-full px-5 py-3 text-left text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3 transition-colors"><svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>My Profile</button></div>
                   <div className="py-2 border-t border-gray-100"><button onClick={handleLogout} className="w-full px-5 py-3 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3">Logout</button></div>
                 </div>
               )}
@@ -204,10 +215,8 @@ const AdminLayout = ({ children }) => {
         </div>
       </aside>
 
-      <aside className={`lg:hidden fixed left-0 top-[60px] bottom-0 z-40 bg-white shadow-2xl w-72 transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="px-4 py-4 border-b border-gray-200">
+      <aside className={`lg:hidden fixed left-0 top-[60px] bottom-0 z-40 bg-white pt-4 shadow-2xl w-72 transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
-        </div>
         <div className="h-[calc(100%-70px)] overflow-y-auto py-4 px-3">
           <nav className="space-y-2">
             {menuItems.map((item) => (
@@ -225,8 +234,26 @@ const AdminLayout = ({ children }) => {
       {sidebarOpen && <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setSidebarOpen(false)}></div>}
 
       <main className={`pt-[60px] transition-all duration-300 ${mainMargin}`} style={{ backgroundColor: 'white' }}>
-        <div className="p-4 lg:p-6 xl:p-8" style={{ backgroundColor: 'white' }}>{children}</div>
+        <div className="p-4 sm:p-6 lg:p-10" style={{ backgroundColor: 'white' }}>{children}</div>
       </main>
+
+      {/* Full Screen Image Modal */}
+      {isFullImageView && userData.profileImage && (
+        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-fade-in backdrop-blur-sm">
+          <button
+            onClick={() => setIsFullImageView(false)}
+            className="absolute top-6 right-6 w-12 h-12 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-all transform hover:scale-110 shadow-2xl"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+
+          <img
+            src={userData.profileImage}
+            alt="Full Screen Profile"
+            className="w-auto h-auto max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl shadow-black/50 pointer-events-none select-none"
+          />
+        </div>
+      )}
     </div>
   );
 };

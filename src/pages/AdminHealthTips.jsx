@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 import AdminLayout from '../components/AdminLayout';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
+import CustomSelect from '../components/CustomSelect';
 
 const defaultCategories = ['All', 'Sleep', 'Diabetes', 'Heart Health', 'Weight Loss', 'Prevention', 'Nutrition', 'Endocrine', 'Lifestyle', 'Mental Health'];
 
@@ -30,7 +32,7 @@ const AdminHealthTips = () => {
   const fetchHealthTips = async () => {
     setIsLoading(true);
     try {
-      const q = query(collection(db, 'healthTips'), orderBy('createdAt', 'desc'));
+      const q = query(collection(db, 'healthTips'), orderBy('createdAt', 'desc'), limit(20));
       const querySnapshot = await getDocs(q);
       const tips = [];
       querySnapshot.forEach((doc) => {
@@ -197,12 +199,33 @@ const AdminHealthTips = () => {
     setImagePreview(null);
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-      setFormData({ ...formData, image: previewUrl });
+      if (file.size > 5 * 1024 * 1024) {
+        showToastMessage('Image must be under 5MB', 'error');
+        return;
+      }
+
+      try {
+        showToastMessage('Uploading image...', 'success');
+
+        // Show local preview immediately
+        const previewUrl = URL.createObjectURL(file);
+        setImagePreview(previewUrl);
+
+        // Upload to Cloudinary
+        const result = await uploadToCloudinary(file);
+        const cloudUrl = result.secure_url;
+
+        setFormData({ ...formData, image: cloudUrl });
+        setImagePreview(null); // Clear preview once we have the real URL
+        showToastMessage('Image uploaded successfully!', 'success');
+      } catch (err) {
+        console.error('Upload error:', err);
+        showToastMessage(err.message || 'Failed to upload image.', 'error');
+        setImagePreview(null);
+      }
     }
   };
 
@@ -448,17 +471,22 @@ const AdminHealthTips = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-bold text-gray-700 mb-2">Category <span className="text-red-500">*</span></label>
-                    <select value={formData.category} onChange={(e) => {
-                      if (e.target.value === 'custom_new') {
-                        setFormData({ ...formData, category: 'custom_new' });
-                      } else {
-                        setFormData({ ...formData, category: e.target.value });
-                        setCustomCategory('');
-                      }
-                    }} className="w-full px-5 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-gray-800 font-medium focus:outline-none focus:border-[#263B6A] transition-all shadow-sm appearance-none cursor-pointer">
-                      {getCurrentCategories().map(cat => (<option key={cat} value={cat}>{cat}</option>))}
-                      <option value="custom_new">-- Add New Category --</option>
-                    </select>
+                    <CustomSelect
+                      options={[
+                        ...getCurrentCategories().map(cat => ({ label: cat, value: cat })),
+                        { label: '-- Add New Category --', value: 'custom_new' }
+                      ]}
+                      value={formData.category}
+                      onChange={(val) => {
+                        if (val === 'custom_new') {
+                          setFormData({ ...formData, category: 'custom_new' });
+                        } else {
+                          setFormData({ ...formData, category: val });
+                          setCustomCategory('');
+                        }
+                      }}
+                      placeholder="Select Category"
+                    />
                     {formData.category === 'custom_new' && (
                       <input type="text" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} className="w-full mt-3 px-5 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-gray-800 font-medium focus:outline-none focus:border-[#263B6A] transition-all shadow-sm" placeholder="Enter new category name" />
                     )}
@@ -481,7 +509,7 @@ const AdminHealthTips = () => {
                         <label className="px-6 py-3.5 bg-cyan-600 text-white font-bold text-center rounded-xl shadow-lg hover:bg-cyan-700 hover:shadow-xl hover:-translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-2">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                           Upload File
-                          <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                          <input type="file" accept="image/*,.pdf" onChange={handleImageUpload} className="hidden" />
                         </label>
                       </div>
                     </div>
@@ -624,27 +652,30 @@ const AdminHealthTips = () => {
             </div>
           </div>
 
-          <div className="premium-card p-6">
-            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className="premium-card p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex-1 relative">
                 <input
                   type="text"
                   placeholder="Search health tips..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-gray-800 font-medium placeholder-gray-400 focus:outline-none focus:border-[#263B6A] transition-all"
+                  className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-100 rounded-xl text-sm sm:text-base font-medium placeholder-gray-400 focus:outline-none focus:border-[#263B6A] transition-all"
                 />
                 <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-5 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-gray-800 font-medium focus:outline-none focus:border-[#263B6A] transition-all cursor-pointer min-w-[200px]"
-              >
-                {allCategories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
-              </select>
+              
+              <div className="w-full sm:w-[220px]">
+                <CustomSelect
+                  options={allCategories}
+                  value={categoryFilter}
+                  onChange={(cat) => setCategoryFilter(cat)}
+                  placeholder="All Categories"
+                  className="!shadow-none"
+                />
+              </div>
             </div>
           </div>
 

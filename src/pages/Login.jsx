@@ -39,11 +39,11 @@ const Login = () => {
         const systemId = getSystemFingerprint();
         const systemName = getSystemName();
         const browserName = getBrowserName();
-        
+
         // Check for existing session on this system
         const sessionRef = doc(db, 'users', user.uid, 'sessions', systemId);
         const sessionSnap = await getDoc(sessionRef);
-        
+
         let sessionId;
         if (sessionSnap.exists()) {
           // Reuse existing sessionId to allow concurrent browsers on same system
@@ -85,7 +85,7 @@ const Login = () => {
         }
 
         // Hardcoded fallback for the primary admin email
-        if (user.email && user.email.toLowerCase() === 'admin@gmail.com') {
+        if (user.email && user.email.toLowerCase() === 'dhvanikoshti26@gmail.com') {
           isAdmin = true;
         }
 

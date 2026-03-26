@@ -5,6 +5,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import {
   collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp
 } from 'firebase/firestore';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
+import CustomSelect from '../components/CustomSelect';
 
 const UploadReport = () => {
   const [dragActive, setDragActive] = useState(false);
@@ -73,7 +75,7 @@ const UploadReport = () => {
       const val = (t.base + (Math.random() * t.range - t.range / 2)).toFixed(1);
       const value = parseFloat(val);
       let status = 'Normal';
-      
+
       // Basic normal range checks for simulation
       if (t.name === 'Hemoglobin' && (value < 13.5 || value > 17.5)) status = value < 12 ? 'Abnormal' : 'Borderline';
       if (t.name === 'Glucose' && value > 100) status = value > 125 ? 'Abnormal' : 'Borderline';
@@ -91,15 +93,15 @@ const UploadReport = () => {
   };
 
   // ─── Upload handler (Base64 → Firestore, no Storage plan needed) ──────────
-  const handleUpload = useCallback((file) => {
+  const handleUpload = useCallback(async (file) => {
     if (!currentUser) {
       setUploadError('You must be logged in to upload reports.');
       return;
     }
     if (!file) return;
 
-    // File size check (base64 ~33% larger, so 2MB file ≈ 2.7MB encoded)
-    const maxMB = 2;
+    // File size check
+    const maxMB = 10; // Cloudinary handled larger files better than Base64
     if (file.size > maxMB * 1024 * 1024) {
       setUploadError(`File too large. Please upload a file under ${maxMB} MB.`);
       return;
@@ -109,53 +111,40 @@ const UploadReport = () => {
     setUploadProgress(0);
     setUploadSuccess(false);
 
-    const reader = new FileReader();
+    try {
+      setUploadProgress(20); // Initializing upload
 
-    reader.onprogress = (e) => {
-      if (e.lengthComputable) {
-        setUploadProgress(Math.round((e.loaded / e.total) * 80)); // read = 0→80%
-      }
-    };
+      // Upload to Cloudinary
+      const result = await uploadToCloudinary(file);
+      const fileUrl = result.secure_url;
 
-    reader.onerror = () => {
-      setUploadError('Could not read file. Please try again.');
-      setUploadProgress(null);
-      setSelectedFile(null);
-    };
+      setUploadProgress(80); // Processing on Firebase
 
-    reader.onload = async (e) => {
-      try {
-        setUploadProgress(90); // saving to Firestore
-        const base64String = e.target.result; // "data:image/png;base64,..."
+      const reportData = {
+        name: file.name,
+        date: new Date().toISOString().split('T')[0],
+        type: file.type.includes('pdf') ? 'pdf' : 'image',
+        size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+        fileData: fileUrl,   // Cloudinary URL instead of base64
+        createdAt: serverTimestamp(),
+        medicalData: generateSimulatedMedicalData(),
+      };
 
-        const reportData = {
-          name: file.name,
-          date: new Date().toISOString().split('T')[0],
-          type: file.type.includes('pdf') ? 'pdf' : 'image',
-          size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-          fileData: base64String,   // actual file stored as base64
-          createdAt: serverTimestamp(),
-          medicalData: generateSimulatedMedicalData(), // Added simulated extraction
-        };
+      await addDoc(collection(db, 'users', currentUser.uid, 'reports'), reportData);
 
-        await addDoc(collection(db, 'users', currentUser.uid, 'reports'), reportData);
-
-        setUploadProgress(100);
-        await fetchReports(currentUser);  // refresh list
-        setUploadSuccess(true);
-      } catch (err) {
-        console.error('Firestore save error:', err);
-        setUploadError('Failed to save report. Please try again.');
-      } finally {
-        setTimeout(() => {
-          setUploadProgress(null);
-          setUploadSuccess(false);
-          setSelectedFile(null);
-        }, 3000);
-      }
-    };
-
-    reader.readAsDataURL(file); // converts to base64
+      setUploadProgress(100);
+      await fetchReports(currentUser);
+      setUploadSuccess(true);
+    } catch (err) {
+      console.error('Upload error:', err);
+      setUploadError(err.message || 'Failed to upload report. Please try again.');
+    } finally {
+      setTimeout(() => {
+        setUploadProgress(null);
+        setUploadSuccess(false);
+        setSelectedFile(null);
+      }, 3000);
+    }
   }, [currentUser, fetchReports]);
 
   // ─── Drag & drop handlers ─────────────────────────────────────────────────
@@ -232,6 +221,13 @@ const UploadReport = () => {
     }
     return matchesSearch && matchesDate;
   });
+
+  const dateFilterOptions = [
+    { label: 'All Dates', value: 'all' },
+    { label: 'Last 7 days', value: 'week' },
+    { label: 'Last 30 days', value: 'month' },
+    { label: 'Custom Date Range', value: 'custom' }
+  ];
 
   // ─── JSX ─────────────────────────────────────────────────────────────────
   return (
@@ -342,7 +338,7 @@ const UploadReport = () => {
                       type="file"
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       onChange={handleFileSelect}
-                      accept=".pdf,.jpg,.jpeg,.png"
+                      accept="image/*,.pdf"
                     />
                   </>
                 )}
@@ -383,7 +379,7 @@ const UploadReport = () => {
         </div>
 
         {/* Recently Uploaded Reports */}
-        <div className="premium-card overflow-hidden">
+        <div className="premium-card">
           <div className="px-6 py-4 border-b border-gray-100">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -413,16 +409,13 @@ const UploadReport = () => {
                 </div>
 
                 {/* Date filter */}
-                <select
-                  className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm"
+                <CustomSelect
+                  options={dateFilterOptions}
                   value={filterDate}
-                  onChange={(e) => setFilterDate(e.target.value)}
-                >
-                  <option value="all">All Dates</option>
-                  <option value="week">Last 7 days</option>
-                  <option value="month">Last 30 days</option>
-                  <option value="custom">Custom Date Range</option>
-                </select>
+                  onChange={(val) => setFilterDate(val)}
+                  placeholder="All Dates"
+                  className="w-full md:w-56"
+                />
 
                 {filterDate === 'custom' && (
                   <div className="flex gap-3 items-center">
@@ -451,28 +444,28 @@ const UploadReport = () => {
               </div>
             ) : filteredReports.length > 0 ? (
               filteredReports.map((report) => (
-                <div key={report.id} className="px-6 py-4 hover:bg-gray-50 transition-colors flex items-center justify-between">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center">
+                <div key={report.id} className="px-4 sm:px-6 py-4 hover:bg-gray-50 transition-colors flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
                       {getFileIcon(report.type)}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-800 truncate">{report.name}</h3>
-                      <p className="text-sm text-gray-500">{report.date} • {report.size}</p>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-gray-800 truncate text-base sm:text-md mb-0.5">{report.name}</h3>
+                      <p className="text-sm text-gray-500 whitespace-nowrap">{report.date} • {report.size}</p>
                     </div>
                   </div>
 
-                  <div className="flex gap-1.5 ml-4">
+                  <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                     {/* View — opens modal viewer */}
                     <button
                       onClick={() => setViewReport(report)}
-                      className="p-1.5 text-gray-500 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors inline-flex items-center"
+                      className="p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors inline-flex items-center"
                       title="View Report"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                           d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                           d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
                     </button>
@@ -481,10 +474,10 @@ const UploadReport = () => {
                     <a
                       href={report.fileData || '#'}
                       download={report.name}
-                      className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors inline-flex items-center"
+                      className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors inline-flex items-center"
                       title="Download"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round"
                           d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
@@ -493,16 +486,17 @@ const UploadReport = () => {
                     {/* Delete */}
                     <button
                       onClick={() => deleteReport(report.id)}
-                      className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="Delete"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                           d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
                   </div>
                 </div>
+
               ))
             ) : (
               <div className="px-6 py-12 text-center">

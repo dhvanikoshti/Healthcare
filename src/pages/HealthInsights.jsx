@@ -252,14 +252,18 @@ const HealthInsights = () => {
               <div className="flex bg-white rounded-xl overflow-hidden">
                 <button
                   onClick={() => setActiveTab('risk')}
-                  className={`flex-1 py-4 px-6 font-bold transition-all ${activeTab === 'risk' ? 'bg-white shadow-sm text-[#263B6A]' : 'text-gray-600 hover:text-gray-800'
+                  className={`flex-1 py-4 px-6 font-bold transition-all duration-300 rounded-xl ${activeTab === 'risk' 
+                    ? 'bg-gray-100 text-[#263B6A] shadow-inner' 
+                    : 'text-gray-500 hover:text-[#263B6A] hover:bg-gray-50'
                     }`}
                 >
                   🛡️ Risk Assessment
                 </button>
                 <button
                   onClick={() => setActiveTab('diagnosis')}
-                  className={`flex-1 py-4 px-6 font-bold transition-all ${activeTab === 'diagnosis' ? 'bg-white shadow-sm text-[#263B6A]' : 'text-gray-600 hover:text-gray-800'
+                  className={`flex-1 py-4 px-6 font-bold transition-all duration-300 rounded-xl ${activeTab === 'diagnosis' 
+                    ? 'bg-gray-100 text-[#263B6A] shadow-inner' 
+                    : 'text-gray-500 hover:text-[#263B6A] hover:bg-gray-50'
                     }`}
                 >
                   🩺 Diagnosis & Advice
@@ -287,7 +291,7 @@ const HealthInsights = () => {
                 )}
 
                 {/* Risk Cards */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   {riskData.map((risk) => {
                     const statusStyle = getStatusColor(risk.status);
                     const progressColor = getProgressColor(risk.status);
@@ -341,8 +345,8 @@ const HealthInsights = () => {
 
                 {/* Summary */}
                 <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-                  <h2 className="text-xl font-bold text-gray-800 mb-6">Overall Risk Summary</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <h2 className="text-xl font-bold text-gray-800 mb-6 text-center lg:text-left">Overall Risk Summary</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
                     <div className="text-center p-4 bg-white border border-green-100 rounded-xl">
                       <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white border border-green-200 flex items-center justify-center">
                         <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -510,18 +514,7 @@ const HealthInsights = () => {
               </div>
             )}
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-6 justify-center p-12">
-              <button className="flex items-center gap-3 justify-center px-16 py-6 bg-gradient-to-r from-[#263B6A] to-[#3b82f6] text-white font-bold rounded-3xl shadow-2xl hover:shadow-3xl transition-all hover:scale-[1.02] text-lg">
-                📥 Download PDF Report
-              </button>
-              <button
-                className="flex items-center gap-3 justify-center px-16 py-6 border-2 border-gray-200 text-gray-800 font-bold rounded-3xl shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] hover:bg-white text-lg"
-                onClick={() => navigate('/health-tips')}
-              >
-                💡 Health Tips
-              </button>
-            </div>
+
           </>
         )}
       </div>
