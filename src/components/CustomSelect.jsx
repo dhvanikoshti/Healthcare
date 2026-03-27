@@ -70,7 +70,7 @@ const CustomSelect = ({
 
         {isOpen && (
           <>
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-2xl z-[100] overflow-hidden animate-fade-in-up">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-2xl z-[999] overflow-hidden animate-fade-in-up">
               <div className="max-h-[60vh] sm:max-h-[400px] overflow-y-auto no-scrollbar py-2">
                 {options.map((option, index) => {
                   const optLabel = typeof option === 'string' ? option : option.label;

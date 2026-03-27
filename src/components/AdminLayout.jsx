@@ -234,7 +234,7 @@ const AdminLayout = ({ children }) => {
       {sidebarOpen && <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setSidebarOpen(false)}></div>}
 
       <main className={`pt-[60px] transition-all duration-300 ${mainMargin}`} style={{ backgroundColor: 'white' }}>
-        <div className="p-4 sm:p-6 lg:p-10" style={{ backgroundColor: 'white' }}>{children}</div>
+        <div className="p-4 sm:p-6 lg:p-6 xl:p-10" style={{ backgroundColor: 'white' }}>{children}</div>
       </main>
 
       {/* Full Screen Image Modal */}

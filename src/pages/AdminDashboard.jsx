@@ -23,13 +23,13 @@ const AdminDashboard = () => {
   const [mode, setMode] = useState('compare');
 
   // Derive years from data or provide defaults
+  // Dynamically derive a gap-free list of years from data + a baseline range (2020-2030)
   const years = useMemo(() => {
+    const baseline = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030];
     const dataYears = Array.from(new Set(yearlyRegData.map(d => d.year)));
-    if (dataYears.length === 0) {
-      return [currentYear - 2, currentYear - 1, currentYear];
-    }
-    return dataYears.sort((a, b) => a - b);
-  }, [yearlyRegData, currentYear]);
+    const allYears = Array.from(new Set([...baseline, ...dataYears]));
+    return allYears.sort((a, b) => a - b);
+  }, [yearlyRegData]);
 
   // Ensure year1 and year2 are valid when data loads
   useEffect(() => {
@@ -66,15 +66,21 @@ const AdminDashboard = () => {
           // Compute status dynamically: inactive if last active > 2 months ago
           const twoMonthsAgo = new Date();
           twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-          const lastActiveRaw = data.lastActive;
-          const lastActiveDate = lastActiveRaw?.toDate
-            ? lastActiveRaw.toDate()
-            : lastActiveRaw
-              ? new Date(lastActiveRaw)
-              : null;
-          const dynamicStatus = lastActiveDate && lastActiveDate < twoMonthsAgo
-            ? 'Inactive'
-            : 'Active';
+
+          let lastActiveDate;
+          if (data.lastActive?.toDate) {
+            lastActiveDate = data.lastActive.toDate();
+          } else if (data.lastActive) {
+            lastActiveDate = new Date(data.lastActive);
+          } else if (data.createdAt?.toDate) {
+            lastActiveDate = data.createdAt.toDate();
+          } else if (data.joinedDate) {
+            lastActiveDate = new Date(data.joinedDate);
+          } else {
+            lastActiveDate = new Date(); // Fallback to current year
+          }
+
+          const dynamicStatus = lastActiveDate < twoMonthsAgo ? 'Inactive' : 'Active';
 
           if (dynamicStatus === 'Inactive') {
             inactive++;
@@ -83,12 +89,20 @@ const AdminDashboard = () => {
           }
 
           let date;
-          if (data.createdAt && data.createdAt.toDate) {
-            date = data.createdAt.toDate();
+          if (data.createdAt) {
+            if (data.createdAt.toDate) {
+              date = data.createdAt.toDate();
+            } else {
+              // Handle string format e.g., "26 March 2024 at 15:27:14 UTC+5:30"
+              const cleanDateStr = typeof data.createdAt === 'string'
+                ? data.createdAt.split(' at ')[0]
+                : data.createdAt;
+              date = new Date(cleanDateStr);
+            }
           } else if (data.joinedDate) {
             date = new Date(data.joinedDate);
           } else {
-            date = new Date();
+            date = new Date(); // Fallback to current year
           }
 
           if (date) {
@@ -103,19 +117,17 @@ const AdminDashboard = () => {
           }
         });
 
-        let availableYears = Object.keys(regDataMap).map(Number).sort((a, b) => a - b);
+        // Identify years from data plus our baseline baseline (2020-2030)
+        let baseline = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030];
+        let dataYearsFound = Object.keys(regDataMap).map(Number);
+        const availableYears = Array.from(new Set([...baseline, ...dataYearsFound, currentYear])).sort((a, b) => a - b);
 
-        if (!availableYears.includes(currentYear)) {
-          availableYears.push(currentYear);
-          regDataMap[currentYear] = {};
-          monthNames.forEach(name => regDataMap[currentYear][name] = 0);
-        }
-        if (!availableYears.includes(currentYear - 1)) {
-          availableYears.push(currentYear - 1);
-          regDataMap[currentYear - 1] = {};
-          monthNames.forEach(name => regDataMap[currentYear - 1][name] = 0);
-        }
-        availableYears = availableYears.sort((a, b) => a - b);
+        availableYears.forEach(y => {
+          if (!regDataMap[y]) {
+            regDataMap[y] = {};
+            monthNames.forEach(name => regDataMap[y][name] = 0);
+          }
+        });
 
         const chartDataArray = [];
         availableYears.forEach(y => {
@@ -197,9 +209,12 @@ const AdminDashboard = () => {
       }));
     }
     if (mode === 'compare') {
-      const d1 = yearlyRegData.filter(i => i.year === year1);
-      const d2 = yearlyRegData.filter(i => i.year === year2);
-      return d1.map((item, idx) => ({ month: item.month, [year1]: item.reg, [year2]: d2[idx]?.reg || 0 }));
+      const total1 = yearlyRegData.filter(i => i.year === year1).reduce((s, i) => s + i.reg, 0);
+      const total2 = yearlyRegData.filter(i => i.year === year2).reduce((s, i) => s + i.reg, 0);
+      return [
+        { year: year1.toString(), registrations: total1 },
+        { year: year2.toString(), registrations: total2 }
+      ];
     }
     return yearlyRegData.filter(i => i.year === year1).map(i => ({ month: i.month, registrations: i.reg }));
   }, [yearlyRegData, year1, year2, mode, years]);
@@ -227,7 +242,7 @@ const AdminDashboard = () => {
 
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
           {cards.map((c, i) => (
             <div key={i} className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">
               {/* Soft Gradient Background Blob */}
@@ -270,11 +285,11 @@ const AdminDashboard = () => {
                 <p className="text-sm text-gray-500">{mode === 'all' ? `Yearly totals comparison (${years.join(', ')})` : mode === 'compare' ? `Comparing ${year1} vs ${year2}` : `Monthly registrations in ${year1}`}</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-3">
-              <div className="flex bg-white rounded-xl p-0.5 sm:p-1 shadow-sm border border-gray-200">
-                <button onClick={() => setMode('single')} className={`px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'single' ? 'bg-[#547792] text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Single</button>
-                <button onClick={() => setMode('compare')} className={`px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'compare' ? 'bg-white text-[#547792] shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>Compare</button>
-                <button onClick={() => setMode('all')} className={`px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'all' ? 'bg-white text-[#547792] shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>All</button>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+              <div className="flex bg-white rounded-xl p-0.5 sm:p-1 shadow-sm border border-gray-200 shrink-0">
+                <button onClick={() => setMode('single')} className={`px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'single' ? 'bg-[#547792] text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Single</button>
+                <button onClick={() => setMode('compare')} className={`px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'compare' ? 'bg-white text-[#547792] shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>Compare</button>
+                <button onClick={() => setMode('all')} className={`px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'all' ? 'bg-white text-[#547792] shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>All</button>
               </div>
 
               {mode === 'single' && (
@@ -283,26 +298,26 @@ const AdminDashboard = () => {
                   value={year1}
                   onChange={(val) => setYear1(val)}
                   placeholder="Year"
-                  className="w-28 sm:w-32"
+                  className="w-20 sm:w-32 shrink-0"
                 />
               )}
 
               {mode === 'compare' && (
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                   <CustomSelect
                     options={years.map(y => ({ label: y.toString(), value: y }))}
                     value={year1}
                     onChange={(val) => setYear1(val)}
-                    placeholder="Year 1"
-                    className="w-28 sm:w-32"
+                    placeholder="Year"
+                    className="w-20 sm:w-32"
                   />
-                  <span className="text-gray-400 font-medium text-xs sm:text-sm">vs</span>
+                  <span className="text-gray-400 font-bold text-[9px] sm:text-xs uppercase shrink-0">vs</span>
                   <CustomSelect
-                    options={years.filter(y => y !== year1).map(y => ({ label: y.toString(), value: y }))}
+                    options={years.map(y => ({ label: y.toString(), value: y }))}
                     value={year2}
                     onChange={(val) => setYear2(val)}
-                    placeholder="Year 2"
-                    className="w-28 sm:w-32"
+                    placeholder="Year"
+                    className="w-20 sm:w-32"
                   />
                 </div>
               )}
@@ -323,12 +338,11 @@ const AdminDashboard = () => {
               ) : mode === 'compare' ? (
                 <BarChart data={chartData} margin={{ top: 10, right: 30, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} />
+                  <XAxis dataKey="year" stroke="#94a3b8" fontSize={12} />
                   <YAxis stroke="#94a3b8" fontSize={12} />
                   <Tooltip contentStyle={{ backgroundColor: 'white', border: 'none', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
                   <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                  <Bar dataKey={year1} name={`${year1}`} fill="#547792" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey={year2} name={`${year2}`} fill="#263B6A" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="registrations" name="Yearly Total" fill="#263B6A" radius={[8, 8, 0, 0]} />
                 </BarChart>
               ) : (
                 <BarChart data={chartData} margin={{ top: 10, right: 30, left: -10, bottom: 0 }}>

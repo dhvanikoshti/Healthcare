@@ -97,7 +97,6 @@ const AdminHealthTips = () => {
     shortDesc: '',
     category: 'Diabetes',
     image: '',
-    content: ''
   });
 
   const [sections, setSections] = useState([
@@ -178,7 +177,6 @@ const AdminHealthTips = () => {
         shortDesc: '',
         category: 'Diabetes',
         image: '',
-        content: ''
       });
       setSections([{ id: Date.now(), title: '', content: '' }]);
       setSelectedTip(null);
@@ -282,11 +280,6 @@ const AdminHealthTips = () => {
   };
 
   const handleSave = async () => {
-    const htmlContent = sections.map(s => `
-      ${s.title ? `<h2 class="text-xl font-bold text-gray-800 mb-3 mt-6">${s.title}</h2>` : ''}
-      <p class="mb-4">${s.content.replace(/\n/g, '<br/>')}</p>
-    `).join('');
-
     const finalCategory = formData.category === 'custom_new' ? (customCategory.trim() || 'Other') : formData.category;
 
     try {
@@ -294,17 +287,19 @@ const AdminHealthTips = () => {
         const docRef = await addDoc(collection(db, 'healthTips'), {
           ...formData,
           category: finalCategory,
-          content: htmlContent,
           sections: sections,
           createdAt: serverTimestamp()
         });
         showToastMessage('Health tip added successfully!', 'success');
       } else if (modalMode === 'edit') {
         const tipRef = doc(db, 'healthTips', selectedTip.id);
+        
+        // Exclude ID and other metadata from the update payload to keep Firestore clean
+        const { id, ...updateData } = formData;
+        
         const tipUpdate = {
-          ...formData,
+          ...updateData,
           category: finalCategory,
-          content: htmlContent,
           sections: sections,
         };
         if (!selectedTip.createdAt) {
@@ -444,7 +439,11 @@ const AdminHealthTips = () => {
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-4 pt-4" id="admin-action-buttons">
-                <button onClick={() => { setFormData({ ...selectedTip }); setModalMode('edit'); }} className="px-6 py-3 bg-[#547792] text-white font-bold rounded-xl hover:bg-[#45667d] transition-all flex items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+                <button onClick={() => { 
+                  setFormData({ ...selectedTip }); 
+                  setSections(selectedTip.sections || parseHtmlToSections(selectedTip.content));
+                  setModalMode('edit'); 
+                }} className="px-6 py-3 bg-[#547792] text-white font-bold rounded-xl hover:bg-[#45667d] transition-all flex items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                   Edit Article
                 </button>
@@ -666,7 +665,7 @@ const AdminHealthTips = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-              
+
               <div className="w-full sm:w-[220px]">
                 <CustomSelect
                   options={allCategories}

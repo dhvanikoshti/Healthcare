@@ -254,10 +254,10 @@ const UploadReport = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-6">
 
           {/* Upload Card */}
-          <div className="lg:col-span-2">
-            <div className="premium-card overflow-hidden">
-              <div className="px-4 py-3 bg-white border-b border-gray-100">
-                <h2 className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+          <div className="lg:col-span-2 flex flex-col">
+            <div className="premium-card overflow-hidden h-full flex flex-col">
+            <div className="px-5 py-3 bg-white border-b border-gray-100">
+                <h2 className="text-md font-bold text-gray-800 flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
                       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -271,7 +271,7 @@ const UploadReport = () => {
 
               {/* Drop Zone */}
               <div
-                className={`relative border-2 border-dashed rounded-lg m-3 p-6 text-center transition-all duration-300 min-h-[200px] flex flex-col items-center justify-center
+                className={`flex-1 relative border-2 border-dashed rounded-lg m-2 p-4 text-center transition-all duration-300 min-h-[160px] flex flex-col items-center justify-center
                   ${dragActive ? 'border-cyan-500 bg-cyan-50 scale-[1.02]'
                     : uploadSuccess ? 'border-green-500 bg-green-50'
                       : uploadProgress !== null ? 'border-cyan-400 bg-white'
@@ -316,8 +316,8 @@ const UploadReport = () => {
 
                 ) : (
                   <>
-                    <div className="w-14 h-26 mb-3 rounded-xl bg-white border border-cyan-100 flex items-center justify-center shadow-sm">
-                      <svg className="w-7 h-7 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-12 h-12 mb-2 rounded-xl bg-white border border-cyan-100 flex items-center justify-center shadow-sm">
+                      <svg className="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                           d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
@@ -347,30 +347,30 @@ const UploadReport = () => {
           </div>
 
           {/* Tips Card */}
-          <div className="premium-card overflow-hidden h-fit">
-            <div className="px-6 py-4 bg-white border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="premium-card overflow-hidden h-full flex flex-col">
+            <div className="px-5 py-3 bg-white border-b border-gray-100">
+              <h2 className="text-md font-bold text-gray-800 flex items-center gap-2">
+                <svg className="w-4.5 h-4.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
                 Upload Tips
               </h2>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-5 space-y-3.5 flex-1">
               {[
                 { color: 'cyan', num: '1', title: 'Clear Images', desc: 'Ensure reports are clearly readable' },
                 { color: 'purple', num: '2', title: 'Complete Reports', desc: 'Upload full diagnostic reports' },
-                { color: 'pink', num: '3', title: 'Recent Dates', desc: 'Use reports from the last 6 months' },
-                { color: 'green', num: '4', title: 'Multiple Pages', desc: 'Scan all pages of your reports' },
+                // { color: 'pink', num: '3', title: 'Recent Dates', desc: 'Use reports from the last 6 months' },
+                { color: 'green', num: '3', title: 'Multiple Pages', desc: 'Scan all pages of your reports' },
               ].map(({ color, num, title, desc }) => (
                 <div key={num} className="flex items-start gap-3">
-                  <div className={`w-8 h-8 rounded-lg bg-${color}-100 flex items-center justify-center flex-shrink-0`}>
-                    <span className={`text-${color}-600 font-bold text-sm`}>{num}</span>
+                  <div className={`w-7 h-7 rounded-lg bg-${color}-100 flex items-center justify-center flex-shrink-0`}>
+                    <span className={`text-${color}-600 font-bold text-xs`}>{num}</span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-800">{title}</h3>
-                    <p className="text-sm text-gray-500">{desc}</p>
+                    <h3 className="font-semibold text-gray-800 text-sm">{title}</h3>
+                    <p className="text-xs text-gray-500">{desc}</p>
                   </div>
                 </div>
               ))}
@@ -393,19 +393,32 @@ const UploadReport = () => {
                 </span>
               </h2>
 
-              <div className="flex flex-col md:flex-row gap-3">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
                 {/* Search */}
-                <div className="relative">
+                <div className="relative group w-full md:w-72">
                   <input
                     type="text"
                     placeholder="Search reports..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full md:w-64 px-4 py-2.5 pl-10 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all text-sm"
+                    className="w-full px-4 py-2.5 pl-11 pr-10 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all text-sm placeholder:text-gray-400 shadow-sm group-hover:border-gray-300"
                   />
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-cyan-600 transition-colors">
+                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-4.35-4.35M19 11a8 8 0 11-16 0 8 8 0 0116 0z" />
+                    </svg>
+                  </div>
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-all"
+                      title="Clear search"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
 
                 {/* Date filter */}

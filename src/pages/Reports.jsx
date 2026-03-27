@@ -4,8 +4,8 @@ import Layout from '../components/Layout';
 import CustomSelect from '../components/CustomSelect';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { 
-  collection, getDocs, query, orderBy, deleteDoc, doc 
+import {
+  collection, getDocs, query, orderBy, deleteDoc, doc
 } from 'firebase/firestore';
 
 const Reports = () => {
@@ -294,8 +294,8 @@ const Reports = () => {
             <button
               onClick={() => setCategoryFilter('all')}
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${categoryFilter === 'all'
-                  ? 'bg-gray-800 text-white border-gray-800'
-                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                ? 'bg-gray-800 text-white border-gray-800'
+                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                 }`}
             >
               All
@@ -305,8 +305,8 @@ const Reports = () => {
                 key={cat}
                 onClick={() => setCategoryFilter(cat)}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 border ${categoryFilter === cat
-                    ? 'text-white'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                  ? 'text-white'
+                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}
                 style={{
                   backgroundColor: categoryFilter === cat ? getCategoryColor(cat) : '',
@@ -349,72 +349,56 @@ const Reports = () => {
               const categoryColor = getCategoryColor(report.category);
               return (
                 <div key={report.id} className="premium-card overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-4">
+                  <div className="p-5">
+                    <div className="flex items-start justify-between mb-3">
                       <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center"
+                        className="w-10 h-10 rounded-xl flex items-center justify-center"
                         style={{ backgroundColor: categoryColor + '15' }}
                       >
-                        <svg className="w-6 h-6" style={{ color: categoryColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" style={{ color: categoryColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
                       <span
-                        className="px-3 py-1 rounded-full text-xs font-semibold border"
+                        className="px-2.5 py-1 rounded-full text-[10px] font-semibold border"
                         style={{ backgroundColor: 'white', color: statusStyle.text, borderColor: statusStyle.border }}
                       >
                         {statusStyle.label}
                       </span>
                     </div>
-                    <h3 className="font-bold text-gray-800 mb-1 line-clamp-1">{report.name}</h3>
-                    <p className="text-sm text-gray-500 mb-4">{report.category} • {report.date}</p>
+                    <h3 className="font-bold text-gray-800 mb-0.5 line-clamp-1 text-sm">{report.name}</h3>
+                    <p className="text-xs text-gray-500 mb-3">{report.category} • {report.date}</p>
 
-                    {report.hemoglobin && (
-                      <div className="mb-4">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-500">Hemoglobin</span>
-                          <span className="font-semibold text-gray-800">{report.hemoglobin} g/dL</span>
-                        </div>
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{
-                              width: `${(report.hemoglobin / 18) * 100}%`,
-                              backgroundColor: categoryColor
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
+
 
                     {report.risks > 0 && (
-                      <div className="flex items-center gap-2 mb-4">
-                        <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-center gap-2 mb-3">
+                        <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
-                        <span className="text-sm font-medium text-orange-600">{report.risks} Active Risks</span>
+                        <span className="text-xs font-medium text-orange-600">{report.risks} Active Risks</span>
                       </div>
                     )}
 
-                    <div className="flex gap-2 pt-4 border-t border-gray-100">
+                    <div className="flex gap-2 pt-3 border-t border-gray-100">
                       <button
                         onClick={() => { setSelectedReport(report); setViewModal(true); }}
-                        className="flex-1 px-4 py-2.5 bg-gray-800 text-white rounded-xl font-medium hover:bg-gray-700 transition-colors text-sm"
+                        className="flex-1 px-3 py-2 bg-gray-800 text-white rounded-xl font-medium hover:bg-gray-700 transition-colors text-xs"
                       >
                         View
                       </button>
                       <button
                         onClick={() => { setSelectedReport(report); setAnalysisModal(true); }}
-                        className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-colors text-sm w-20"
+                        className="px-3 py-2 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-colors text-xs w-18"
                       >
                         Analysis
                       </button>
                       <button
                         onClick={() => deleteReport(report.id)}
-                        className="p-2.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                        className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                         title="Delete Report"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
@@ -434,7 +418,6 @@ const Reports = () => {
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Category</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Date</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Status</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Hemoglobin</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Risks</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Actions</th>
                   </tr>
@@ -445,7 +428,7 @@ const Reports = () => {
                     const categoryColor = getCategoryColor(report.category);
                     return (
                       <tr key={report.id} className="hover:bg-white transition-colors">
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
                             <div
                               className="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -458,26 +441,25 @@ const Reports = () => {
                             <span className="font-medium text-gray-800">{report.name}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3.5">
                           <span className="px-3 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: categoryColor + '15', color: categoryColor }}>
                             {report.category}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">{report.date}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3.5">
                           <span className="px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: 'white', color: statusStyle.text, borderColor: statusStyle.border }}>
                             {statusStyle.label}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{report.hemoglobin ? `${report.hemoglobin} g/dL` : '-'}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3.5">
                           {report.risks > 0 ? (
                             <span className="text-orange-600 font-medium">{report.risks} risks</span>
                           ) : (
                             <span className="text-green-600">None</span>
                           )}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3.5">
                           <div className="flex gap-2">
                             <button
                               onClick={() => { setSelectedReport(report); setViewModal(true); }}
@@ -542,9 +524,9 @@ const Reports = () => {
                 <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                   {selectedReport.fileData ? (
                     selectedReport.type === 'image' ? (
-                      <img 
-                        src={selectedReport.fileData} 
-                        alt={selectedReport.name} 
+                      <img
+                        src={selectedReport.fileData}
+                        alt={selectedReport.name}
                         className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
                       />
                     ) : (
@@ -619,8 +601,8 @@ const Reports = () => {
                     <div className="mt-3 flex items-center gap-2">
                       <span className="text-sm text-gray-500">Risk Level:</span>
                       <span className={`px-3 py-1 rounded-full text-xs font-bold bg-white border ${selectedReport.risks >= 3 ? 'border-red-200 text-red-700' :
-                          selectedReport.risks >= 1 ? 'border-yellow-200 text-yellow-700' :
-                            'border-green-200 text-green-700'
+                        selectedReport.risks >= 1 ? 'border-yellow-200 text-yellow-700' :
+                          'border-green-200 text-green-700'
                         }`}>
                         {selectedReport.risks >= 3 ? 'High Risk' :
                           selectedReport.risks >= 1 ? 'Moderate Risk' :

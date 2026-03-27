@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import AdminLayout from '../components/AdminLayout';
 import CustomSelect from '../components/CustomSelect';
+import { collection, getDocs, query, limit } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const riskCategoryData = [
   { id: 1, name: 'Diabetes', value: 245, color: '#dc2626', percentage: 12.5, level: 'High', trend: '+5%' },
@@ -18,22 +20,23 @@ const riskCategoryData = [
   { id: 12, name: 'Depression', value: 112, color: '#a855f7', percentage: 5.7, level: 'Medium', trend: '+7%' },
 ];
 
-const ageGroupData = [
-  { age: '18-25', count: 180, percentage: 14.4 },
-  { age: '26-35', count: 320, percentage: 25.7 },
-  { age: '36-45', count: 380, percentage: 30.5 },
-  { age: '46-55', count: 245, percentage: 19.6 },
-  { age: '56-65', count: 95, percentage: 7.6 },
-  { age: '65+', count: 27, percentage: 2.2 },
-];
-
-const genderData = [
-  { name: 'Male', value: 680, color: '#263B6A' },
-  { name: 'Female', value: 520, color: '#ec4899' },
-  { name: 'Other', value: 47, color: '#8b5cf6' },
-];
-
 const AdminAnalytics = () => {
+  const [ageGroupData, setAgeGroupData] = useState([
+    { age: '18-25', count: 0, percentage: 0 },
+    { age: '26-35', count: 0, percentage: 0 },
+    { age: '36-45', count: 0, percentage: 0 },
+    { age: '46-55', count: 0, percentage: 0 },
+    { age: '56-65', count: 0, percentage: 0 },
+    { age: '65+', count: 0, percentage: 0 },
+  ]);
+
+  const [genderData, setGenderData] = useState([
+    { name: 'Male', value: 0, color: '#263B6A' },
+    { name: 'Female', value: 0, color: '#ec4899' },
+    { name: 'Other', value: 0, color: '#8b5cf6' },
+  ]);
+
+  const [totalUsers, setTotalUsers] = useState(0);
   const [timeRange, setTimeRange] = useState('30d');
   const [startDate, setStartDate] = useState('2024-01-01');
   const [endDate, setEndDate] = useState('2024-07-15');
@@ -44,6 +47,65 @@ const AdminAnalytics = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('value-desc');
   const [selectedRisk, setSelectedRisk] = useState(null);
+
+  useEffect(() => {
+    const fetchDemographics = async () => {
+      try {
+        const usersRef = collection(db, 'users');
+        const querySnapshot = await getDocs(usersRef);
+
+        let total = 0;
+        const genders = { Male: 0, Female: 0, Other: 0 };
+        const ages = { '18-25': 0, '26-35': 0, '36-45': 0, '46-55': 0, '56-65': 0, '65+': 0 };
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          const isAdmin = data.role === 'admin' ||
+            ['dhvanikoshti26@gmail.com', 'admin@gmail.com'].includes(data.email);
+
+          if (isAdmin) return;
+          total++;
+
+          // Gender count
+          const g = data.gender || 'Other';
+          if (genders[g] !== undefined) genders[g]++;
+          else genders['Other']++;
+
+          // Age calculation from dob
+          if (data.dob) {
+            const birthDate = new Date(data.dob);
+            if (!isNaN(birthDate)) {
+               const age = new Date().getFullYear() - birthDate.getFullYear();
+               if (age >= 18 && age <= 25) ages['18-25']++;
+               else if (age >= 26 && age <= 35) ages['26-35']++;
+               else if (age >= 36 && age <= 45) ages['36-45']++;
+               else if (age >= 46 && age <= 55) ages['46-55']++;
+               else if (age >= 56 && age <= 65) ages['56-65']++;
+               else if (age > 65) ages['65+']++;
+            }
+          }
+        });
+
+        setTotalUsers(total);
+        setGenderData([
+          { name: 'Male', value: genders.Male, color: '#263B6A' },
+          { name: 'Female', value: genders.Female, color: '#ec4899' },
+          { name: 'Other', value: genders.Other, color: '#8b5cf6' },
+        ]);
+
+        const ageArray = Object.keys(ages).map(key => ({
+          age: key,
+          count: ages[key],
+          percentage: total > 0 ? Number(((ages[key] / total) * 100).toFixed(1)) : 0
+        }));
+        setAgeGroupData(ageArray);
+      } catch (error) {
+        console.error("Error fetching demographics:", error);
+      }
+    };
+
+    fetchDemographics();
+  }, []);
 
   const handleTimeRangeChange = (range) => {
     setTimeRange(range);
@@ -109,7 +171,7 @@ const AdminAnalytics = () => {
                   <span className="text-sm text-white/80">System Operational</span>
                 </div>
                 <span className="text-white/40">|</span>
-                <span className="text-sm text-white/80">1,247 Total Users</span>
+                <span className="text-sm text-white/80">{totalUsers.toLocaleString()} Total Users</span>
               </div>
             </div>
 
@@ -213,7 +275,7 @@ const AdminAnalytics = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {/* Interactive Pie Chart */}
             <div className="relative">
               <div className="h-64 md:h-72">
@@ -365,7 +427,7 @@ const AdminAnalytics = () => {
                   </div>
                   <p className="text-lg sm:text-3xl font-bold text-gray-800">{item.value}</p>
                   <p className="text-[10px] sm:text-base text-gray-500 truncate">{item.name}</p>
-                  <p className="text-[10px] sm:text-sm font-semibold mt-0.5 sm:mt-1" style={{ color: item.color }}>{Math.round((item.value / 1247) * 100)}%</p>
+                  <p className="text-[10px] sm:text-sm font-semibold mt-0.5 sm:mt-1" style={{ color: item.color }}>{totalUsers > 0 ? Math.round((item.value / totalUsers) * 100) : 0}%</p>
                 </div>
               ))}
             </div>

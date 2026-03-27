@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
-import { collection, getDocs, doc, updateDoc, query, orderBy, limit, startAfter } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, orderBy, limit, startAfter, getCountFromServer } from 'firebase/firestore';
 import { db } from '../firebase';
 import CustomSelect from '../components/CustomSelect';
 
@@ -42,44 +42,61 @@ const AdminUsers = () => {
       }
 
       const querySnapshot = await getDocs(q);
-      const usersList = [];
       
       const newLastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
       setLastDoc(newLastDoc);
       setHasMore(querySnapshot.docs.length === 50);
 
-      querySnapshot.forEach((document) => {
+      const relevantDocs = querySnapshot.docs.filter((document) => {
         const data = document.data();
-        // Exclude any user with admin role or known admin emails
         const isAdmin = data.role === 'admin' ||
           (data.email && (
             data.email === 'dhvanikoshti26@gmail.com' ||
             data.email === 'admin@gmail.com'
           ));
-        if (isAdmin) return;
+        return !isAdmin;
+      });
 
-        let dateObj = new Date();
-        if (data.createdAt && data.createdAt.toDate) {
-          dateObj = data.createdAt.toDate();
-        } else if (data.joinedDate) {
-          dateObj = new Date(data.joinedDate);
-        }
+      const usersList = await Promise.all(relevantDocs.map(async (document) => {
+        const data = document.data();
 
-        const lastActiveDate = data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : dateObj);
         const twoMonthsAgo = new Date();
         twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+
+        // Joined Date calculation
+        let joinedDateObj = new Date();
+        if (data.createdAt?.toDate) {
+          joinedDateObj = data.createdAt.toDate();
+        } else if (data.joinedDate) {
+          joinedDateObj = new Date(data.joinedDate);
+        }
+
+        let lastActiveDate;
+        if (data.lastActive?.toDate) {
+          lastActiveDate = data.lastActive.toDate();
+        } else if (data.lastActive) {
+          lastActiveDate = new Date(data.lastActive);
+        } else {
+          lastActiveDate = joinedDateObj; // Fallback to joined date
+        }
+
         const dynamicStatus = lastActiveDate < twoMonthsAgo ? 'Inactive' : 'Active';
 
-        usersList.push({
+        // Fetch report count efficiently from subcollection
+        const reportsRef = collection(db, 'users', document.id, 'reports');
+        const reportSnapshot = await getCountFromServer(reportsRef);
+        const reportCount = reportSnapshot.data().count;
+
+        return {
           id: document.id,
           name: data.name || 'Unknown',
           email: data.email || 'No email',
           phone: data.contactNumber || 'N/A',
           status: dynamicStatus,
           riskLevel: data.riskLevel || 'Low',
-          reports: data.reports || 0,
+          reports: reportCount,
           lastActive: lastActiveDate.toISOString().split('T')[0],
-          joinedDate: dateObj.toISOString().split('T')[0],
+          joinedDate: joinedDateObj.toISOString().split('T')[0],
           avatar: getInitials(data.name || data.email),
           gender: data.gender || 'N/A',
           dob: data.dob || 'N/A',
@@ -88,8 +105,8 @@ const AdminUsers = () => {
           emergencyContact: data.emergencyContact || 'N/A',
           medicalConditions: data.medicalConditions || 'None',
           profileImage: data.profileImage || null
-        });
-      });
+        };
+      }));
 
       if (isNextPage) {
         setUsers(prev => [...prev, ...usersList]);
