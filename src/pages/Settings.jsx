@@ -344,23 +344,37 @@ const Settings = () => {
             <div className="px-6 md:px-10 pt-6 md:pt-10 pb-10 relative">
               <div className="absolute top-6 md:top-10 right-6 md:right-10 flex gap-2 z-20">
                 {!isEditing ? (
-                  <button onClick={() => setIsEditing(true)} className="flex items-center justify-center w-10 h-10 bg-white hover:bg-gray-200 text-gray-700 rounded-full shadow-sm transition-all hover:scale-110" title="Edit Profile">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  <button 
+                    onClick={() => setIsEditing(true)} 
+                    className="flex items-center justify-center w-12 h-12 bg-white hover:bg-indigo-50 text-indigo-600 rounded-full shadow-lg border border-indigo-100 transition-all hover:scale-110 group" 
+                    title="Edit Profile"
+                  >
+                    <svg className="w-6 h-6 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
                   </button>
                 ) : (
-                  <>
-                    <button onClick={() => setIsEditing(false)} className="flex items-center justify-center w-10 h-10 bg-white hover:bg-gray-200 text-gray-700 rounded-full shadow-sm transition-all hover:scale-110" title="Cancel">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setIsEditing(false)} 
+                      className="flex items-center justify-center w-12 h-12 bg-white hover:bg-red-50 text-red-600 rounded-full shadow-lg border border-red-100 transition-all hover:scale-110" 
+                      title="Cancel"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
                     </button>
                     <button
                       onClick={handleSave}
                       disabled={isUploading}
-                      className={`flex items-center justify-center w-10 h-10 bg-gray-700 text-white rounded-full shadow-md transition-all hover:scale-110 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`flex items-center justify-center w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg transition-all hover:scale-110 hover:bg-indigo-700 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       title={isUploading ? "Uploading image..." : "Save Changes"}
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
 
@@ -450,42 +464,44 @@ const Settings = () => {
                 </div>
 
                 <div className="bg-white p-1">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">
+                    <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Gender
+                  </label>
                   {isEditing ? (
                     <CustomSelect
-                      label="Gender"
                       options={genders}
                       value={userData.gender}
                       onChange={(val) => setUserData(prev => ({ ...prev, gender: val }))}
                       placeholder="Select gender"
                     />
                   ) : (
-                    <>
-                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">
-                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                        Gender
-                      </label>
-                      <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.gender || 'Not set'}</p>
-                    </>
+                    <p className="text-gray-900 font-semibold px-4 py-3 bg-gray-50/50 rounded-xl border border-gray-100 ring-1 ring-black/5 hover:ring-indigo-500/20 transition-all">
+                      {userData.gender || 'Not set'}
+                    </p>
                   )}
                 </div>
 
                 <div className="bg-white p-1">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">
+                    <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                    </svg>
+                    Blood Group
+                  </label>
                   {isEditing ? (
                     <CustomSelect
-                      label="Blood Group"
                       options={bloodGroups}
                       value={userData.bloodGroup}
                       onChange={(val) => setUserData(prev => ({ ...prev, bloodGroup: val }))}
                       placeholder="Select blood group"
                     />
                   ) : (
-                    <>
-                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">
-                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                        Blood Group
-                      </label>
-                      <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.bloodGroup || 'Not set'}</p>
-                    </>
+                    <p className="text-gray-900 font-semibold px-4 py-3 bg-gray-50/50 rounded-xl border border-gray-100 ring-1 ring-black/5 hover:ring-indigo-500/20 transition-all">
+                      {userData.bloodGroup || 'Not set'}
+                    </p>
                   )}
                 </div>
               </div>
