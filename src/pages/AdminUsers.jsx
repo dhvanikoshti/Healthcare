@@ -33,7 +33,7 @@ const AdminUsers = () => {
 
       const usersRef = collection(db, 'users');
       let q;
-      
+
       if (isNextPage && lastDoc) {
         // Use a larger limit for the first few pages to keep the UI snappy
         q = query(usersRef, orderBy('createdAt', 'desc'), startAfter(lastDoc), limit(50));
@@ -42,7 +42,7 @@ const AdminUsers = () => {
       }
 
       const querySnapshot = await getDocs(q);
-      
+
       const newLastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
       setLastDoc(newLastDoc);
       setHasMore(querySnapshot.docs.length === 50);
@@ -242,11 +242,10 @@ const AdminUsers = () => {
                   <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm ${viewUser.status === 'Active' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
                     {viewUser.status}
                   </span>
-                  <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm ${
-                    viewUser.riskLevel === 'High' ? 'bg-red-50 border-red-200 text-red-700' :
-                    viewUser.riskLevel === 'Medium' ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                    'bg-green-50 border-green-200 text-green-700'
-                  }`}>
+                  <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm ${viewUser.riskLevel === 'High' ? 'bg-red-50 border-red-200 text-red-700' :
+                      viewUser.riskLevel === 'Medium' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                        'bg-green-50 border-green-200 text-green-700'
+                    }`}>
                     {viewUser.riskLevel} Risk
                   </span>
                 </div>
@@ -315,25 +314,22 @@ const AdminUsers = () => {
                     </p>
                   </div>
                   {/* Stat: Risk */}
-                  <div className={`rounded-2xl p-6 text-center shadow-sm border ${
-                    viewUser.riskLevel === 'High' ? 'bg-red-50 border-red-100' :
-                    viewUser.riskLevel === 'Medium' ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'
-                  }`}>
-                    <p className={`text-4xl font-black ${
-                      viewUser.riskLevel === 'High' ? 'text-red-600' :
-                      viewUser.riskLevel === 'Medium' ? 'text-amber-500' : 'text-green-600'
-                    }`}>{viewUser.riskLevel[0]}</p>
-                    <p className={`text-[10px] font-bold mt-2 uppercase tracking-widest ${
-                      viewUser.riskLevel === 'High' ? 'text-red-600' :
-                      viewUser.riskLevel === 'Medium' ? 'text-amber-500' : 'text-green-600'
-                    }`}>{viewUser.riskLevel} Risk</p>
+                  <div className={`rounded-2xl p-6 text-center shadow-sm border ${viewUser.riskLevel === 'High' ? 'bg-red-50 border-red-100' :
+                      viewUser.riskLevel === 'Medium' ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'
+                    }`}>
+                    <p className={`text-4xl font-black ${viewUser.riskLevel === 'High' ? 'text-red-600' :
+                        viewUser.riskLevel === 'Medium' ? 'text-amber-500' : 'text-green-600'
+                      }`}>{viewUser.riskLevel[0]}</p>
+                    <p className={`text-[10px] font-bold mt-2 uppercase tracking-widest ${viewUser.riskLevel === 'High' ? 'text-red-600' :
+                        viewUser.riskLevel === 'Medium' ? 'text-amber-500' : 'text-green-600'
+                      }`}>{viewUser.riskLevel} Risk</p>
                   </div>
                 </div>
 
+              </div>
             </div>
           </div>
         </div>
-      </div>
       ) : (
         <div className="space-y-6 animate-fade-in">
           {/* User Management Header */}
@@ -447,7 +443,7 @@ const AdminUsers = () => {
                     <tr key={user.id} className="border-b border-gray-100 bg-white hover:bg-gray-50/50 transition-colors">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div 
+                          <div
                             onClick={() => {
                               if (user.profileImage) {
                                 setPreviewImageUrl(user.profileImage);
@@ -484,16 +480,16 @@ const AdminUsers = () => {
                       <td className="py-4 px-4 text-sm text-gray-600">{user.joinedDate}</td>
                       <td className="py-4 px-4">
                         <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => setViewUser(user)}
-                              className="p-2 text-gray-400 hover:text-[#263B6A] hover:bg-[#e8eef5] rounded-lg transition-colors border border-transparent hover:border-[#263B6A]/20"
-                              title="View Full Profile"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z" />
-                                <circle cx="12" cy="12" r="3" />
-                              </svg>
-                            </button>
+                          <button
+                            onClick={() => setViewUser(user)}
+                            className="p-2 text-gray-400 hover:text-[#263B6A] hover:bg-[#e8eef5] rounded-lg transition-colors border border-transparent hover:border-[#263B6A]/20"
+                            title="View Full Profile"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          </button>
                         </div>
                       </td>
                     </tr>

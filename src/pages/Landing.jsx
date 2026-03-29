@@ -83,12 +83,11 @@ const Landing = () => {
   ];
 
   const faqs = [
-    { q: "Is my data secure?", a: "Yes! We use industry-standard encryption to protect your health data." },
     { q: "Is this a replacement for medical advice?", a: "No, this platform is for informational purposes only. Always consult your doctor." },
-    { q: "Can I export my health data?", a: "Yes, you can export your data in PDF or CSV format at any time." },
+    { q: "Can I export my health data?", a: "Yes, you can export your data in PDF format at any time." },
     { q: "Is the AI chatbot accurate?", a: "Our AI is trained on medical data but should not replace professional medical advice." },
     { q: "How much does this service cost?", a: "We offer a free tier with basic features. " },
-    { q: "What types of health reports can I upload?", a: "You can upload PDF documents, images (JPEG, PNG), lab results, and medical records." },
+    { q: "What types of health reports can I upload?", a: "You can upload PDF documents, images (JPEG, PNG), and medical records." },
     { q: "How long does AI analysis take?", a: "Most reports are analyzed within seconds to a few minutes." },
     { q: "Can I use this on mobile devices?", a: "Yes! Our platform is fully responsive and works on all devices." },
     { q: "Is my personal health data shared with third parties?", a: "No, we never share your personal health data with third parties." },
@@ -107,7 +106,7 @@ const Landing = () => {
               <img
                 src="./src/assets/logo.png"
                 alt="HealthCare AI Logo"
-                className="w-50 h-15  p-1"
+                className="w-40 sm:w-48 lg:w-56 h-auto p-1"
               />
             </div>
 
@@ -156,41 +155,46 @@ const Landing = () => {
 
       {/* Hero Section */}
       <section
-        className="pt-20 sm:pt-24 lg:pt-28 pb-10 sm:pb-14 lg:pb-16 px-4 sm:px-6 lg:px-8"
+        className="pt-20 sm:pt-24 lg:pt-28 pb-8 sm:pb-12 lg:pb-16 px-4 sm:px-6 lg:px-8"
         style={{
-          backgroundImage: 'url(/src/assets/hero_section.png)',
+          backgroundImage: 'linear-gradient(rgba(38, 59, 106, 0.45), rgba(38, 59, 106, 0.45)), url(/src/assets/hero_section.png)',
           backgroundSize: 'contain',
-          backgroundPosition: 'right center',
+          backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
           backgroundColor: '#263B6A'
         }}
       >
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-center min-h-[45vh] sm:min-h-[55vh] lg:min-h-[65vh]">
-            {/* Left side - Empty for background image on large screens */}
-            <div className="lg:col-span-7 order-1"></div>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center min-h-[20vh] sm:min-h-[50vh] lg:min-h-[60vh]">
+            {/* Left side - Empty spacer for desktop backdrop framing */}
+            <div className="hidden md:block md:col-span-6 lg:col-span-7"></div>
             {/* Right side - Content */}
-            <div className="lg:col-span-5 text-center lg:text-right order-2">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight">
-                Your Health,{" "}
+            <div className="md:col-span-6 lg:col-span-5 text-right relative z-10">
+              <h1 className="mt-20 sm:mt-0 md:mt-0 lg:mt-0 text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight">
+                Your Health,<br className="md:hidden" />{" "}
                 <span className="whitespace-nowrap">
                   <span style={{ color: '#547792' }}>Smarter</span>
                   <span className="text-white"> & Simpler</span>
                 </span>
               </h1>
-              <p className="mt-3 sm:mt-4 lg:mt-5 text-sm sm:text-base lg:text-lg text-white/80">
+              <p className="hidden md:block mt-4 lg:mt-6 text-sm sm:text-base lg:text-lg text-white/90 max-w-2xl ml-auto mr-0">
                 {/* Experience the future of healthcare with AI-powered insights. Our neural engine analyzes your health data in real-time to health tracking, personalized recommendations and predict risks before they become problems.
                  */}
-                 AI-powered technology analyzes your health data in real time to track the progress , deliver personalized recommendations , and detect potential risks before they become serious problems.
+                AI-powered technology analyzes your health data in real time to track the progress , deliver personalized recommendations , and detect potential risks before they become serious problems.
               </p>
-              <div className="mt-4 sm:mt-5 lg:mt-6 flex flex-col sm:flex-row gap-3 sm:gap-4 lg:gap-6 justify-center lg:justify-end">
-                <Link to="/register" className="px-5 sm:px-6 lg:px-7 py-2.5 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg shadow-lg hover:scale-105 transition transform" style={{ backgroundColor: '#547792' }}>Start Free Trial</Link>
-                <button onClick={startDemo} className="px-5 sm:px-6 lg:px-7 py-2.5 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg border-2 border-white/30 hover:bg-white/10 transition">Watch Demo</button>
+              <div className="mt-20 sm:mt-15 lg:mt-6 flex flex-col md:flex-row gap-3 sm:gap-4 lg:gap-6 items-end md:items-center justify-end">
+                <Link to="/register" className="w-full md:w-auto text-center px-5 sm:px-6 lg:px-7 py-2.5 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg shadow-lg hover:scale-105 transition transform" style={{ backgroundColor: '#547792' }}>Start Free Trial</Link>
+                <button onClick={startDemo} className="w-full md:w-auto px-5 sm:px-6 lg:px-7 py-2.5 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg border-2 border-white/30 hover:bg-white/10 transition">Watch Demo</button>
               </div>
             </div>
           </div>
         </div>
       </section>
+
+
+
+
+
 
       {/* Features Section */}
       <section id="features" className="py-10 sm:py-14 lg:py-16 px-4 sm:px-6 lg:px-8">
@@ -201,7 +205,7 @@ const Landing = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
             {features.map((feature, idx) => (
-              <div key={idx} className="bg-white rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg hover:shadow-xl transition hover:-translate-y-1">
+              <div key={idx} className="bg-white border-gray-100 border-1 rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg hover:shadow-xl transition hover:-translate-y-1">
                 <div className="w-10 h-10 sm:w-12 lg:w-14 rounded-xl flex items-center justify-center text-xl sm:text-2xl lg:text-3xl mb-2.5 sm:mb-3 lg:mb-4" style={{ backgroundColor: '#FFFFFF' }}>{feature.icon}</div>
                 <h3 className="font-bold text-base lg:text-lg mb-1.5 lg:mb-2" style={{ color: '#263B6A' }}>{feature.title}</h3>
                 <p className="text-gray-600 text-sm">{feature.desc}</p>

@@ -168,3 +168,9 @@ body {
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   transform: translateY(-2px);
 }
+
+/* Hide default browser password reveal buttons (Edge/IE) */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}

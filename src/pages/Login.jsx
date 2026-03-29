@@ -140,7 +140,7 @@ const Login = () => {
           <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-10 relative">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold" style={{ color: '#547792' }}>Sign In</h2>
-              <p className="text-gray-500 mt-2">Please enter your details to continue</p>
+              <p className="text-gray-500 mt-2 text-sm sm:text-base whitespace-nowrap">Please enter your details to continue</p>
             </div>
 
             {/* Success Modal */}
@@ -225,7 +225,7 @@ const Login = () => {
                 ) : null}
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 whitespace-nowrap">
                 <label className="flex items-center cursor-pointer">
                   <input
                     type="checkbox"
@@ -234,9 +234,9 @@ const Login = () => {
                     className="w-4 h-4 rounded"
                     style={{ accentColor: '#547792' }}
                   />
-                  <span className="ml-2 text-gray-600">Remember me</span>
+                  <span className="ml-2 text-gray-600 text-xs sm:text-sm">Remember me</span>
                 </label>
-                <Link to="/forgot-password" className="font-medium hover:underline" style={{ color: '#547792' }}>
+                <Link to="/forgot-password" disableUnderline className="text-xs sm:text-sm font-medium hover:underline whitespace-nowrap" style={{ color: '#547792' }}>
                   Forgot password?
                 </Link>
               </div>
