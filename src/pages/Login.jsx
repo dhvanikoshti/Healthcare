@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { auth, db } from '../firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getSystemFingerprint, getSystemName, getBrowserName } from '../utils/deviceFingerprint';
 
@@ -14,6 +14,30 @@ const Login = () => {
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    setResetMessage('');
+    
+    if (!formik.values.email) {
+      setLoginError('Please enter your email address first to reset your password.');
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, formik.values.email);
+      setResetMessage('Password reset email sent! Please check your inbox.');
+    } catch (error) {
+      console.error('Password reset error:', error);
+      if (error.code === 'auth/user-not-found') {
+        setLoginError('No account found with this email address.');
+      } else {
+        setLoginError('Failed to send reset email. Please try again.');
+      }
+    }
+  };
 
   const formik = useFormik({
     initialValues: {
@@ -161,6 +185,23 @@ const Login = () => {
               </div>
             )}
 
+            {/* Reset Password Success Message */}
+            {resetMessage && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 animate-fade-in">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-green-800">Reset Email Sent</p>
+                    <p className="text-sm text-green-600">{resetMessage}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Error Message */}
             {loginError && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 animate-fade-in">
@@ -236,9 +277,14 @@ const Login = () => {
                   />
                   <span className="ml-2 text-gray-600 text-xs sm:text-sm">Remember me</span>
                 </label>
-                <Link to="/forgot-password" disableUnderline className="text-xs sm:text-sm font-medium hover:underline whitespace-nowrap" style={{ color: '#547792' }}>
+                <button 
+                  type="button" 
+                  onClick={handleForgotPassword} 
+                  className="text-xs sm:text-sm font-medium hover:underline whitespace-nowrap bg-transparent border-none cursor-pointer p-0" 
+                  style={{ color: '#547792' }}
+                >
                   Forgot password?
-                </Link>
+                </button>
               </div>
 
               <button

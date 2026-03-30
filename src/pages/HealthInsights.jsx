@@ -22,62 +22,35 @@ const HealthInsights = () => {
     {
       id: 1,
       name: 'Diabetes Risk',
-      score: 25,
+      score: 24,
       status: 'Normal',
-      description: 'Your diabetes risk is within normal range. Maintain a healthy lifestyle to keep it that way.',
-      recommendations: ['Regular exercise', 'Balanced diet', 'Annual screening'],
+      description: 'Your diabetes risk is well managed. Fasting glucose levels exhibit a positive metabolic drift down to 94 mg/dL.',
+      recommendations: ['Maintain complex carbohydrates', '30 minutes daily aerobic exercise', 'Quarterly HbA1c screening'],
       icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
-    },
-    {
-      id: 2,
-      name: 'Cholesterol Risk',
-      score: 45,
-      status: 'Borderline',
-      description: 'Your cholesterol levels are slightly elevated. Consider dietary modifications.',
-      recommendations: ['Reduce saturated fats', 'Increase fiber intake', 'Regular monitoring'],
-      icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z'
-    },
-    {
-      id: 3,
-      name: 'Anemia Risk',
-      score: 15,
-      status: 'Normal',
-      description: 'Your hemoglobin levels are healthy. No anemia risk detected.',
-      recommendations: ['Continue iron-rich diet', 'Regular checkups'],
-      icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z'
-    },
-    {
-      id: 4,
-      name: 'Heart Risk',
-      score: 30,
-      status: 'Normal',
-      description: 'Your cardiovascular health is good. Keep up the healthy habits.',
-      recommendations: ['Regular cardio exercise', 'Low sodium diet', 'Blood pressure monitoring'],
-      icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z'
-    },
+    }
   ];
 
   // Diagnosis data from user feedback
   const diagnoses = [
     {
       id: 1,
-      title: 'No Anemia Detected',
+      title: 'Optimal Glucose Homeostasis',
       status: 'good',
-      description: 'Hemoglobin levels are within normal range (13.5-17.5 g/dL for males)',
+      description: 'Fasting glucose level is optimal at 94 mg/dL per your latest screening.',
       icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
     },
     {
       id: 2,
-      title: 'Borderline Cholesterol',
-      status: 'warning',
-      description: 'LDL cholesterol slightly elevated at 135 mg/dL (optimal: below 100 mg/dL)',
-      icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+      title: 'Positive Metabolic Drift',
+      status: 'good',
+      description: 'Your Glucose levels have improved significantly over previous readings.',
+      icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'
     },
     {
       id: 3,
-      title: 'Normal Blood Sugar',
+      title: 'Diabetes Risk: Minimal',
       status: 'good',
-      description: 'Fasting glucose level is normal at 95 mg/dL',
+      description: 'Current physiological markers indicate stable glycemic control with low probability of metabolic disorder.',
       icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
     },
   ];
@@ -86,22 +59,22 @@ const HealthInsights = () => {
   const advice = [
     {
       id: 1,
-      title: 'Dietary Changes',
-      description: 'Reduce saturated fat intake. Include more fiber-rich foods like oats, beans, and fruits. Limit red meat consumption to twice a week.',
+      title: 'Glycemic Maintenance',
+      description: 'Continue your current dietary balance. Focus on complex carbohydrates and avoid rapid-spike sugars to maintain stability.',
       icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
       color: '#06b6d4'
     },
     {
       id: 2,
-      title: 'Exercise Routine',
-      description: 'Engage in moderate aerobic exercise for at least 150 minutes per week. Include activities like walking, swimming, or cycling.',
+      title: 'Physical Activity Consistency',
+      description: 'Moderate aerobic exercise (30 mins daily) is key to your current metabolic success. This helps in natural insulin sensitivity.',
       icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
       color: '#22c55e'
     },
     {
       id: 3,
-      title: 'Follow-up Testing',
-      description: 'Schedule a lipid panel test in 3 months to monitor cholesterol levels. Continue annual comprehensive blood work.',
+      title: 'Quarterly Monitoring',
+      description: 'Schedule your next fasting glucose check in 3 months to verify continued stability in your primary health marker.',
       icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
       color: '#8b5cf6'
     },
@@ -144,13 +117,13 @@ const HealthInsights = () => {
       step++;
       const progress = step / steps;
       setAnimatedStats({
-        reports: Math.round(96 * progress),
-        score: Math.round(95 * progress),
-        risks: Math.round(2 * progress)
+        reports: Math.round(4 * progress),
+        score: Math.round(94 * progress),
+        risks: Math.round(0 * progress)
       });
       if (step >= steps) {
         clearInterval(timer);
-        setAnimatedStats({ reports: 96, score: 95, risks: 2 });
+        setAnimatedStats({ reports: 4, score: 94, risks: 0 });
       }
     }, interval);
     return () => clearInterval(timer);
@@ -234,16 +207,7 @@ const HealthInsights = () => {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-6">
-                  <div className="text-center p-4 bg-white/10 rounded-2xl">
-                    <div className="text-2xl font-bold text-green-400">Low</div>
-                    <div className="text-sm text-cyan-200">Risk Level</div>
-                  </div>
-                  <div className="text-center p-4 bg-white/10 rounded-2xl">
-                    <div className="text-2xl font-bold text-cyan-200">{animatedStats.score}%</div>
-                    <div className="text-sm text-cyan-200">Health Score</div>
-                  </div>
-                </div>
+
               </div>
             </div>
 
@@ -252,8 +216,8 @@ const HealthInsights = () => {
               <div className="flex bg-white rounded-xl overflow-hidden">
                 <button
                   onClick={() => setActiveTab('risk')}
-                  className={`flex-1 py-4 px-6 font-bold transition-all duration-300 rounded-xl ${activeTab === 'risk' 
-                    ? 'bg-gray-100 text-[#263B6A] shadow-inner' 
+                  className={`flex-1 py-4 px-6 font-bold transition-all duration-300 rounded-xl ${activeTab === 'risk'
+                    ? 'bg-gray-100 text-[#263B6A] shadow-inner'
                     : 'text-gray-500 hover:text-[#263B6A] hover:bg-gray-50'
                     }`}
                 >
@@ -261,8 +225,8 @@ const HealthInsights = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab('diagnosis')}
-                  className={`flex-1 py-4 px-6 font-bold transition-all duration-300 rounded-xl ${activeTab === 'diagnosis' 
-                    ? 'bg-gray-100 text-[#263B6A] shadow-inner' 
+                  className={`flex-1 py-4 px-6 font-bold transition-all duration-300 rounded-xl ${activeTab === 'diagnosis'
+                    ? 'bg-gray-100 text-[#263B6A] shadow-inner'
                     : 'text-gray-500 hover:text-[#263B6A] hover:bg-gray-50'
                     }`}
                 >
@@ -391,7 +355,7 @@ const HealthInsights = () => {
             {activeTab === 'diagnosis' && (
               <div>
                 {/* Medical Summary */}
-                <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-xl border border-gray-200 mb-8">
+                {/* <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-xl border border-gray-200 mb-8">
                   <div className="flex flex-col lg:flex-row lg:items-center gap-6 mb-6">
                     <div className="w-16 h-16 rounded-2xl bg-gray-800 flex items-center justify-center">
                       <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -422,7 +386,7 @@ const HealthInsights = () => {
                       <p className="text-sm text-gray-500 mt-1">Health Status</p>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Diagnosis Section */}
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-8">
@@ -484,7 +448,7 @@ const HealthInsights = () => {
                 </div>
 
                 {/* Lifestyle */}
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-8">
+                {/* <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-8">
                   <div className="px-6 py-4 bg-white border-b border-gray-100">
                     <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                       <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -510,7 +474,7 @@ const HealthInsights = () => {
                       ))}
                     </div>
                   </div>
-                </div>
+                </div> */}
               </div>
             )}
 

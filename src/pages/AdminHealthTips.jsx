@@ -230,52 +230,124 @@ const AdminHealthTips = () => {
   const downloadPDF = async () => {
     if (isDownloading) return;
     setIsDownloading(true);
-    const element = document.getElementById('admin-print-content');
-    if (!element) {
-      setIsDownloading(false);
-      return;
-    }
-
-    // Hide action buttons temporarily during PDF generation
-    const actionButtons = document.getElementById('admin-action-buttons');
-    if (actionButtons) actionButtons.style.display = 'none';
 
     try {
-      showToastMessage('Preparing PDF... please wait.', 'success');
-      const originalStyle = element.style.cssText;
-      element.style.padding = '20px';
-      element.style.backgroundColor = 'white';
+      showToastMessage('Generating PDF... please wait.', 'success');
 
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true, allowTaint: false });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
 
-      let heightLeft = pdfHeight;
-      let position = 0;
+      let cursorY = 25;
 
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
+      // 1. Header & Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(38, 59, 106); // #263B6A
 
-      while (heightLeft > 0) {
-        position = heightLeft - pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
+      const titleLines = doc.splitTextToSize(selectedTip.title || 'Health Tip', contentWidth);
+      doc.text(titleLines, margin, cursorY);
+      cursorY += (titleLines.length * 10) + 5;
+
+      // 2. Category Badge
+      if (selectedTip.category) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(6, 182, 212); // #06b6d4
+        doc.text(selectedTip.category.toUpperCase(), margin, cursorY);
+        cursorY += 8;
       }
 
-      pdf.save(`${selectedTip?.title ? selectedTip.title.replace(/\s+/g, '_') : 'health_tip'}.pdf`);
+      // 3. Description
+      if (selectedTip.shortDesc) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(12);
+        doc.setTextColor(100, 116, 139); // #64748b
+        const descLines = doc.splitTextToSize(selectedTip.shortDesc, contentWidth);
+        doc.text(descLines, margin, cursorY);
+        cursorY += (descLines.length * 7) + 10;
+      }
 
-      element.style.cssText = originalStyle;
+      // 4. Horizontal Line
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, cursorY, pageWidth - margin, cursorY);
+      cursorY += 15;
+
+      // 5. Main Content
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(51, 65, 85); // #334155
+
+      const processText = (text) => {
+        if (!text) return [];
+        // Basic clean up of HTML tags if present
+        const cleanText = text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+        return doc.splitTextToSize(cleanText, contentWidth);
+      };
+
+      if (selectedTip.sections && selectedTip.sections.length > 0) {
+        selectedTip.sections.forEach((section) => {
+          // Check for page overflow
+          if (cursorY > pageHeight - 30) {
+            doc.addPage();
+            cursorY = 20;
+          }
+
+          if (section.title) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.setTextColor(38, 59, 106);
+            doc.text(section.title, margin, cursorY);
+            cursorY += 8;
+          }
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(11);
+          doc.setTextColor(51, 65, 85);
+          const lines = processText(section.content);
+
+          lines.forEach(line => {
+            if (cursorY > pageHeight - 20) {
+              doc.addPage();
+              cursorY = 20;
+            }
+            doc.text(line, margin, cursorY);
+            cursorY += 6;
+          });
+          cursorY += 10;
+        });
+      } else {
+        const lines = processText(selectedTip.content);
+        lines.forEach(line => {
+          if (cursorY > pageHeight - 20) {
+            doc.addPage();
+            cursorY = 20;
+          }
+          doc.text(line, margin, cursorY);
+          cursorY += 6;
+        });
+      }
+
+      // 6. Footer
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`Healthcare App • Health Tips • Page ${i} of ${totalPages}`, margin, pageHeight - 10);
+      }
+
+      doc.save(`${selectedTip.title ? selectedTip.title.replace(/\s+/g, '_') : 'health_tip'}.pdf`);
       showToastMessage('PDF downloaded successfully!', 'success');
+
     } catch (error) {
       console.error('Error generating PDF:', error);
-      showToastMessage('Could not download PDF cleanly due to restricted images. Please use window Print.', 'error');
+      showToastMessage('Failed to trigger download. Generating print view...', 'error');
+      window.print();
     } finally {
       setIsDownloading(false);
-      if (actionButtons) actionButtons.style.display = 'flex';
     }
   };
 
@@ -384,33 +456,31 @@ const AdminHealthTips = () => {
               </div>
 
               {/* Share & Download Section */}
-              <div className="flex justify-end py-6 px-8 bg-white rounded-2xl border border-gray-100 gap-4">
-                {/* Share Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-end py-6 px-8 bg-white rounded-2xl border border-gray-100 gap-4 mb-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Share</span>
                   <button
                     onClick={() => {
                       const text = `Check out this health tip: ${selectedTip.title} - ${selectedTip.shortDesc}`;
                       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
                     }}
-                    className="p-2.5 bg-green-100 text-green-600 rounded-xl hover:bg-green-500 hover:text-white transition-all shadow-sm"
-                    title="Share on WhatsApp"
+                    className="px-5 py-2.5 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
                     </svg>
+                    Share
                   </button>
                   <button
                     onClick={downloadPDF}
                     disabled={isDownloading}
-                    className={`p-2.5 rounded-xl transition-all shadow-sm ${isDownloading ? 'bg-gray-100 text-gray-400 cursor-wait' : 'bg-gray-200 text-gray-600 hover:bg-gray-700 hover:text-white'}`}
-                    title="Download PDF"
+                    className={`px-5 py-2.5 text-white font-semibold rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2 ${isDownloading ? 'bg-cyan-400 cursor-wait' : 'bg-cyan-600 hover:bg-cyan-700'}`}
                   >
                     {isDownloading ? (
                       <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     )}
+                    {isDownloading ? 'Preparing PDF...' : 'Download PDF'}
                   </button>
                 </div>
               </div>

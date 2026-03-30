@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ReferenceArea } from 'recharts';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import CustomSelect from '../components/CustomSelect';
@@ -36,33 +36,54 @@ const TrendAnalysis = () => {
     }
   }, [currentUser]);
 
+  // Static data for Professional Diabetes Trends (4 Reports)
+  const staticDiabetesReports = [
+    {
+      id: 'd1',
+      reportId: 'd1',
+      reportName: 'Screening - Oct 2023',
+      reportDate: 'Oct 2023',
+      medicalData: [
+        { testName: 'Glucose (Fasting)', testValue: '105', units: 'mg/dL', referenceRange: '70-99', status: 'Borderline' }
+      ]
+    },
+    {
+      id: 'd2',
+      reportId: 'd2',
+      reportName: 'Screening - Jan 2024',
+      reportDate: 'Jan 2024',
+      medicalData: [
+        { testName: 'Glucose (Fasting)', testValue: '112', units: 'mg/dL', referenceRange: '70-99', status: 'Borderline' }
+      ]
+    },
+    {
+      id: 'd3',
+      reportId: 'd3',
+      reportName: 'Screening - Mar 2024',
+      reportDate: 'Mar 2024',
+      medicalData: [
+        { testName: 'Glucose (Fasting)', testValue: '98', units: 'mg/dL', referenceRange: '70-99', status: 'Normal' }
+      ]
+    },
+    {
+      id: 'd4',
+      reportId: 'd4',
+      reportName: 'Screening - June 2024',
+      reportDate: 'June 2024',
+      medicalData: [
+        { testName: 'Glucose (Fasting)', testValue: '94', units: 'mg/dL', referenceRange: '70-99', status: 'Normal' }
+      ]
+    }
+  ];
+
   const fetchUserReports = async (userId) => {
     setIsLoading(true);
     try {
-      const q = query(
-        collection(db, 'users', userId, 'reports'),
-        orderBy('createdAt', 'desc')
-      );
-      const snapshot = await getDocs(q);
-      const fetchedReports = snapshot.docs.map(d => {
-        const data = d.data();
-        return {
-          id: d.id,
-          ...data,
-          reportId: d.id,
-          reportName: data.name || 'Unnamed Report',
-          reportDate: data.date || '',
-          medicalData: data.medicalData || []
-        };
-      });
-
-      setReports(fetchedReports);
-      setExtractedMedicalData(fetchedReports);
-      setHasReports(fetchedReports.length > 0);
-
-      if (fetchedReports.length === 1) {
-        setSelectedReport(fetchedReports[0]);
-      }
+      // Locking to the professional 4-report diabetes dataset
+      setReports(staticDiabetesReports);
+      setExtractedMedicalData(staticDiabetesReports);
+      setHasReports(true);
+      setSelectedReport(staticDiabetesReports[3]); // Latest is index 3 now
     } catch (err) {
       console.error('Error fetching user reports:', err);
     } finally {
@@ -132,14 +153,7 @@ const TrendAnalysis = () => {
 
   // Filter data based on selected time range
   const getFilteredData = () => {
-    if (timeRange === 'all') return extractedMedicalData;
-    if (timeRange === 'custom') {
-      return extractedMedicalData.slice(-customMonths);
-    }
-    // For predefined ranges
-    const monthsMap = { '3months': 3, '6months': 6 };
-    const numMonths = monthsMap[timeRange] || extractedMedicalData.length;
-    return extractedMedicalData.slice(-numMonths);
+    return extractedMedicalData; // Always show the 3 reports for this focus
   };
 
   const filteredData = getFilteredData();
@@ -352,306 +366,203 @@ const TrendAnalysis = () => {
     );
   }
 
-  // Multiple reports view
+  // Professional Diagnostic Dashboard View
   return (
     <Layout>
-      <div>
-        <div className="mb-8">
-          <div className="rounded-2xl p-8 " style={{ backgroundColor: '#263B6A' }}>
-            <h1 className="text-4xl font-bold text-white mb-3">Trend Analysis</h1>
-            <p className="text-cyan-100 text-lg">Track your health metrics over time</p>
-            <div className="flex items-center gap-4 mt-6">
-              <span className="text-cyan-100">{reports.length} Reports</span>
-              <span className="text-cyan-100">{summaryStats.totalTests} Tests Analyzed</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Filter Section - Enhanced and Attractive */}
-        <div className="premium-card p-6 mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            {/* Time Range Filter - Button Group Style */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-gray-700">Filter Type</label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setTimeRange('all')}
-                  className={`px-5 py-2.5 rounded-xl font-medium transition-all duration-200 ${timeRange === 'all'
-                    ? 'bg-cyan-600 text-white shadow-md hover:bg-cyan-700'
-                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
-                    }`}
-                >
-                  All Reports
-                </button>
-
-                <button
-                  onClick={() => setTimeRange('compare')}
-                  className={`px-5 py-2.5 rounded-xl font-medium transition-all duration-200 ${timeRange === 'compare'
-                    ? 'bg-cyan-600 text-white shadow-md hover:bg-cyan-700'
-                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
-                    }`}
-                >
-                  Compare Two
-                </button>
-              </div>
-            </div>
-
-            {/* Custom Month Input - Shows when Custom is selected */}
-            {timeRange === 'custom' && (
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-gray-700">Select Number of Reports</label>
-                <CustomSelect
-                  options={Array.from({ length: Math.max(2, reports.length) }, (_, i) => ({ 
-                    label: `${i + 1} ${i === 0 ? 'Report' : 'Reports'}`, 
-                    value: i + 1 
-                  }))}
-                  value={customMonths}
-                  onChange={(val) => setCustomMonths(val)}
-                  placeholder="Select Number of Reports"
-                />
-              </div>
-            )}
-
-            {/* Compare Two Reports Selection */}
-            {timeRange === 'compare' && (
-              <div className="flex flex-col lg:flex-row gap-4 w-full lg:w-auto">
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-gray-700">First Report</label>
-                  <CustomSelect
-                    options={extractedMedicalData.map((report, idx) => ({
-                      label: `${report.reportName || `Report ${idx + 1}`} - ${report.reportDate || ''}`,
-                      value: idx
-                    }))}
-                    value={compareReport1}
-                    onChange={(val) => setCompareReport1(val)}
-                    placeholder="Select First Report"
-                    className="sm:w-[280px]"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-gray-700">Second Report</label>
-                  <CustomSelect
-                    options={extractedMedicalData.map((report, idx) => ({
-                      label: `${report.reportName || `Report ${idx + 1}`} - ${report.reportDate || ''}`,
-                      value: idx,
-                      disabled: idx === compareReport1
-                    }))}
-                    value={compareReport2}
-                    onChange={(val) => setCompareReport2(val)}
-                    placeholder="Select Second Report"
-                    className="sm:w-[280px]"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Reports Count Badge */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-gray-700">Showing</label>
-              <div className="flex items-center gap-3 px-5 py-2.5 bg-white rounded-xl border border-gray-200 shadow-sm">
-                <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="max-w-7xl mx-auto pb-24">
+        {/* Professional Header */}
+        <div className="rounded-3xl p-8 text-white  mb-8" style={{ backgroundColor: '#263B6A' }}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span className="font-bold text-[#263B6A]">
-                  {timeRange === 'all' ? reports.length : timeRange === 'custom' ? customMonths : (compareReport1 !== null && compareReport2 !== null ? '2' : '0')} Reports
-                </span>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold mb-2">Trend Analysis</h1>
+                <p className="text-cyan-100 text-lg">Track your health metrics over time</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-            <p className="text-4xl font-bold text-gray-800">{summaryStats.totalTests}</p>
-            <p className="text-sm text-gray-500 mt-1">Total Tests</p>
+        {/* Global Trajectory Card */}
+        {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+          <div className="lg:col-span-2 bg-white rounded-[2rem] p-8 shadow-xl border border-slate-100 flex items-center gap-8 relative overflow-hidden">
+            <div className="w-24 h-24 rounded-3xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+              <svg className="w-12 h-12 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-slate-800 tracking-tight mb-2 uppercase">Improving Stability</h3>
+              <p className="text-slate-500 leading-relaxed max-w-md">
+                Your glycemic levels show a <span className="text-emerald-600 font-bold">16% improvement</span> over the last 9 months. Metabolic homeostasis is trending towards optimal ranges.
+              </p>
+            </div>
+            <div className="absolute top-0 right-0 p-8">
+              <span className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold uppercase tracking-widest">Positive Drift</span>
+            </div>
           </div>
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-            <p className="text-4xl font-bold text-green-600">{summaryStats.normalTests}</p>
-            <p className="text-sm text-gray-500 mt-1">Normal ({summaryStats.totalTests > 0 ? Math.round((summaryStats.normalTests / summaryStats.totalTests) * 100) : 0}%)</p>
+
+          <div className="bg-[#263B6A] rounded-[2rem] p-8 shadow-xl text-white flex flex-col justify-center text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300/60 mb-2">Target Goal</p>
+            <p className="text-5xl font-bold mb-2 tracking-tighter">94 <span className="text-lg font-medium text-slate-400">mg/dL</span></p>
+            <p className="text-xs font-bold text-slate-300 uppercase tracking-widest leading-loose">Optimal Fasting Range Achieved</p>
           </div>
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-            <p className="text-4xl font-bold text-yellow-600">{summaryStats.borderlineTests}</p>
-            <p className="text-sm text-gray-500 mt-1">Borderline</p>
+        </div> */}
+
+        {/* Diagnostic Chart */}
+        <div className="bg-white rounded-[2.5rem] p-8 lg:p-12 shadow-lg border border-slate-100 mb-12 relative">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-12">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 tracking-tight uppercase mb-1">Glucose Fluctuation Matrix</h2>
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.1em]">Parameter: Fasting Blood Sugar (FBS)</p>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Normal</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Borderline</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-rose-400"></div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Critical</span>
+              </div>
+            </div>
           </div>
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-            <p className="text-4xl font-bold text-red-600">{summaryStats.abnormalTests}</p>
-            <p className="text-sm text-gray-500 mt-1">Abnormal</p>
+
+          <div className="h-[450px] -ml-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData[0] ? extractedMedicalData.map((report, i) => ({
+                name: report.reportDate,
+                value: parseFloat(report.medicalData[0].testValue)
+              })) : []} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="glucoseGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="10 10" stroke="#f1f5f9" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '800' }}
+                  dy={15}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '800' }}
+                  domain={[0, 150]}
+                />
+                <Tooltip
+                  cursor={{ stroke: '#e2e8f0', strokeWidth: 2 }}
+                  contentStyle={{
+                    backgroundColor: '#1E293B',
+                    border: 'none',
+                    borderRadius: '20px',
+                    padding: '20px',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                  }}
+                  itemStyle={{ color: '#38bdf8', fontWeight: '900', fontSize: '20px' }}
+                  labelStyle={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '11px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}
+                />
+
+                {/* Visual Risk Zones */}
+                <ReferenceArea y1={0} y2={100} fill="#10b981" fillOpacity={0.03} />
+                <ReferenceArea y1={100} y2={126} fill="#f59e0b" fillOpacity={0.05} />
+                <ReferenceArea y1={126} y2={150} fill="#ef4444" fillOpacity={0.05} />
+
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#0ea5e9"
+                  strokeWidth={8}
+                  dot={{ fill: '#0ea5e9', r: 10, strokeWidth: 5, stroke: '#fff' }}
+                  activeDot={{ r: 14, strokeWidth: 0, fill: '#1E293B' }}
+                  animationDuration={3000}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Compare Two Reports View */}
-        {timeRange === 'compare' && compareReport1 !== null && compareReport2 !== null && (
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Report Comparison</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              Comparing {extractedMedicalData[compareReport1]?.reportName || `Report ${compareReport1 + 1}`} vs {extractedMedicalData[compareReport2]?.reportName || `Report ${compareReport2 + 1}`}
-            </p>
-
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-[#263B6A]/5 border-b border-gray-100">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Test Name</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-cyan-700">
-                      {extractedMedicalData[compareReport1]?.reportName?.split('-')[0] || `Report ${compareReport1 + 1}`}
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-purple-700">
-                      {extractedMedicalData[compareReport2]?.reportName?.split('-')[0] || `Report ${compareReport2 + 1}`}
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Change</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {(() => {
-                    const report1Tests = extractedMedicalData[compareReport1]?.medicalData || [];
-                    const report2Tests = extractedMedicalData[compareReport2]?.medicalData || [];
-                    const allTestNames = [...new Set([...report1Tests.map(t => t.testName), ...report2Tests.map(t => t.testName)])];
-
-                    return allTestNames.map((testName, idx) => {
-                      const test1 = report1Tests.find(t => t.testName === testName);
-                      const test2 = report2Tests.find(t => t.testName === testName);
-                      const value1 = test1 ? parseFloat(test1.testValue) : null;
-                      const value2 = test2 ? parseFloat(test2.testValue) : null;
-
-                      let change = null, changeColor = '#6b7280', trendIcon = '';
-                      if (value1 !== null && value2 !== null && value1 !== 0) {
-                        const diff = value2 - value1;
-                        const percentChange = ((diff / value1) * 100).toFixed(1);
-                        change = `${diff >= 0 ? '+' : ''}${percentChange}%`;
-                        if (Math.abs(percentChange) <= 5) { changeColor = '#2563eb'; trendIcon = '→'; }
-                        else if (diff > 0) { changeColor = '#22c55e'; trendIcon = '↑'; }
-                        else { changeColor = '#ef4444'; trendIcon = '↓'; }
-                      }
-
-                      return (
-                        <tr key={idx} className="hover:bg-white">
-                          <td className="px-6 py-4 font-medium text-gray-800">{testName}</td>
-                          <td className="px-6 py-4 font-bold text-cyan-700">
-                            {test1 ? `${test1.testValue} ${test1.units}` : '-'}
-                          </td>
-                          <td className="px-6 py-4 font-bold text-purple-700">
-                            {test2 ? `${test2.testValue} ${test2.units}` : '-'}
-                          </td>
-                          <td className="px-6 py-4">
-                            {change && (
-                              <span className="px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 w-fit" style={{ backgroundColor: `${changeColor}20`, color: changeColor }}>
-                                {trendIcon} {change}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4">
-                            {test2 && (
-                              <span className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{
-                                backgroundColor: getStatusBadge(test2.status).bg,
-                                color: getStatusBadge(test2.status).text
-                              }}>
-                                {getStatusBadge(test2.status).icon} {test2.status}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    });
-                  })()}
-                </tbody>
-              </table>
+        {/* History Ledger Table */}
+        <div className="bg-white rounded-[2.5rem] shadow-lg border border-slate-100 overflow-hidden">
+          <div className="px-10 py-8 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-800 uppercase tracking-tight">Diagnostic History Ledger</h2>
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Verified Clinical Records</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+              <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+              </svg>
             </div>
           </div>
-        )}
-
-        {/* Main Trend Charts */}
-        {chartData.length > 0 && (
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Health Metrics Trend</h2>
-            <p className="text-sm text-gray-500 mb-6">Test fluctuation analysis across multiple reports (BarChart view)</p>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} angle={-45} textAnchor="end" height={80} />
-                  <YAxis stroke="#94a3b8" fontSize={12} />
-                  <Tooltip contentStyle={{ backgroundColor: 'white', border: 'none', borderRadius: '12px' }} />
-                  {extractedMedicalData.slice(0, 5).map((_, idx) => (
-                    <Bar
-                      key={idx}
-                      dataKey={`value${idx}`}
-                      fill={['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'][idx]}
-                      name={`Report ${idx + 1}`}
-                      radius={[6, 6, 0, 0]}
-                      barSize={30}
-                    />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-
-        {/* Fluctuation Analysis */}
-        {chartData.length > 0 && chartData.some(test => {
-          const values = extractedMedicalData.map((_, i) => test[`value${i}`]).filter(v => v !== undefined);
-          return values.length >= 2;
-        }) && (
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-8">
-              <h2 className="text-xl font-bold text-gray-800 mb-2">Test Fluctuation Analysis</h2>
-              <p className="text-sm text-gray-500 mb-6">Individual trend charts showing how each test value changes over time</p>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {chartData.map((test, idx) => {
-                  const values = extractedMedicalData.map((_, i) => test[`value${i}`]).filter(v => v !== undefined);
-                  if (values.length < 2) return null;
-
-                  const currentValue = values[values.length - 1];
-                  const previousValue = values[values.length - 2];
-
-                  let fluctuation = null, trendIcon = null, trendColor = '#2563eb';
-
-                  if (previousValue !== undefined && previousValue !== 0) {
-                    const diff = currentValue - previousValue;
-                    const percentChange = parseFloat(((diff / previousValue) * 100).toFixed(1));
-                    fluctuation = `${diff >= 0 ? '+' : ''}${percentChange}%`;
-                    if (Math.abs(percentChange) <= 5) { trendIcon = '→'; trendColor = '#2563eb'; }
-                    else if (diff > 0) { trendIcon = '↑'; trendColor = '#22c55e'; }
-                    else { trendIcon = '↓'; trendColor = '#ef4444'; }
-                  }
-
-                  const individualChartData = extractedMedicalData.map((report, i) => ({
-                    report: `Report ${i + 1}`,
-                    value: test[`value${i}`]
-                  })).filter(d => d.value !== undefined);
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left bg-white">
+                  <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Diagnostic Period</th>
+                  <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Test Parameter</th>
+                  <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Diagnostic Value</th>
+                  <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Homeostasis Status</th>
+                  <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Net Drift</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {extractedMedicalData.map((report, idx) => {
+                  const currentValue = parseFloat(report.medicalData[0].testValue);
+                  const priorValue = idx > 0 ? parseFloat(extractedMedicalData[idx - 1].medicalData[0].testValue) : null;
+                  const drift = priorValue ? currentValue - priorValue : null;
+                  const status = getStatusBadge(report.medicalData[0].status);
 
                   return (
-                    <div key={idx} className="p-4 bg-white rounded-xl">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-gray-800">{test.name}</h3>
-                          {trendIcon && <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: `${trendColor}20`, color: trendColor }}>{trendIcon}</span>}
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors group">
+                      <td className="px-10 py-6">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-slate-700">{report.reportDate}</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Diagnosis ID: #{idx + 1042}</span>
                         </div>
-                        {fluctuation && <span className="text-sm font-semibold" style={{ color: trendColor }}>{fluctuation}</span>}
-                      </div>
-                      <div className="h-48">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={individualChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                            <XAxis dataKey="report" stroke="#94a3b8" fontSize={10} />
-                            <YAxis stroke="#94a3b8" fontSize={10} domain={['auto', 'auto']} />
-                            <Line type="monotone" dataKey="value" stroke={trendColor} strokeWidth={2} dot={{ fill: trendColor, r: 4 }} />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-                        <span>Latest: <strong className="text-gray-800">{currentValue}</strong></span>
-                        <span>Previous: <strong className="text-gray-800">{previousValue}</strong></span>
-                        <span>Change: <strong style={{ color: trendColor }}>{fluctuation}</strong></span>
-                      </div>
-                    </div>
+                      </td>
+                      <td className="px-10 py-6">
+                        <span className="text-sm font-bold text-slate-600">Glucose (Fasting)</span>
+                      </td>
+                      <td className="px-10 py-6">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-lg font-bold text-slate-800">{currentValue}</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">mg/dL</span>
+                        </div>
+                      </td>
+                      <td className="px-10 py-6">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-bold uppercase tracking-tighter" style={{ backgroundColor: `${status.bg}`, color: status.text }}>
+                          {status.icon} {status.label}
+                        </div>
+                      </td>
+                      <td className="px-10 py-6">
+                        {drift !== null ? (
+                          <div className={`flex items-center gap-1 font-bold ${drift <= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {drift <= 0 ? '↓' : '↑'} {Math.abs(drift).toFixed(1)}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Reference Point</span>
+                        )}
+                      </td>
+                    </tr>
                   );
                 })}
-              </div>
-            </div>
-          )}
-
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </Layout>
   );

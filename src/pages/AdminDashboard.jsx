@@ -23,13 +23,15 @@ const AdminDashboard = () => {
   const [mode, setMode] = useState('compare');
 
   // Derive years from data or provide defaults
-  // Dynamically derive a gap-free list of years from data + a baseline range (2020-2030)
+  // Dynamically derive a gap-free list of years from 2024 up to the current year
   const years = useMemo(() => {
-    const baseline = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030];
+    const startYear = 2024;
+    const endYear = Math.max(startYear, currentYear);
+    const baseline = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i);
     const dataYears = Array.from(new Set(yearlyRegData.map(d => d.year)));
     const allYears = Array.from(new Set([...baseline, ...dataYears]));
     return allYears.sort((a, b) => a - b);
-  }, [yearlyRegData]);
+  }, [yearlyRegData, currentYear]);
 
   // Ensure year1 and year2 are valid when data loads
   useEffect(() => {
@@ -117,8 +119,10 @@ const AdminDashboard = () => {
           }
         });
 
-        // Identify years from data plus our baseline baseline (2020-2030)
-        let baseline = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030];
+        // Identify years from data plus our baseline baseline (2024 to current year)
+        const startYear = 2024;
+        const endYear = Math.max(startYear, currentYear);
+        const baseline = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i);
         let dataYearsFound = Object.keys(regDataMap).map(Number);
         const availableYears = Array.from(new Set([...baseline, ...dataYearsFound, currentYear])).sort((a, b) => a - b);
 

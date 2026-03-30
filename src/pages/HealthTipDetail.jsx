@@ -96,44 +96,123 @@ const HealthTipDetail = () => {
   const downloadPDF = async () => {
     if (isDownloading) return;
     setIsDownloading(true);
-    const element = document.getElementById('print-content');
-    if (!element) {
-      setIsDownloading(false);
-      return;
-    }
+
     try {
-      showToastMessage('Preparing PDF... please wait.', 'success');
-      const originalStyle = element.style.cssText;
-      element.style.padding = '20px';
-      element.style.backgroundColor = 'white';
+      showToastMessage('Generating PDF... please wait.', 'success');
 
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true, allowTaint: false });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
 
-      let heightLeft = pdfHeight;
-      let position = 0;
+      let cursorY = 25;
 
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
+      // 1. Header & Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(38, 59, 106); // #263B6A
 
-      while (heightLeft > 0) {
-        position = heightLeft - pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
+      const titleLines = doc.splitTextToSize(tip.title || 'Health Tip', contentWidth);
+      doc.text(titleLines, margin, cursorY);
+      cursorY += (titleLines.length * 10) + 5;
+
+      // 2. Category Badge
+      if (tip.category) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(6, 182, 212); // #06b6d4
+        doc.text(tip.category.toUpperCase(), margin, cursorY);
+        cursorY += 8;
       }
 
-      pdf.save(`${tip.title ? tip.title.replace(/\s+/g, '_') : 'health_tip'}.pdf`);
+      // 3. Description
+      if (tip.shortDesc) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(12);
+        doc.setTextColor(100, 116, 139); // #64748b
+        const descLines = doc.splitTextToSize(tip.shortDesc, contentWidth);
+        doc.text(descLines, margin, cursorY);
+        cursorY += (descLines.length * 7) + 10;
+      }
 
-      element.style.cssText = originalStyle;
+      // 4. Horizontal Line
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, cursorY, pageWidth - margin, cursorY);
+      cursorY += 15;
+
+      // 5. Main Content
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(51, 65, 85); // #334155
+
+      const processText = (text) => {
+        if (!text) return [];
+        // Basic clean up of HTML tags if present
+        const cleanText = text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+        return doc.splitTextToSize(cleanText, contentWidth);
+      };
+
+      if (tip.sections && tip.sections.length > 0) {
+        tip.sections.forEach((section) => {
+          // Check for page overflow
+          if (cursorY > pageHeight - 30) {
+            doc.addPage();
+            cursorY = 20;
+          }
+
+          if (section.title) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.setTextColor(38, 59, 106);
+            doc.text(section.title, margin, cursorY);
+            cursorY += 8;
+          }
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(11);
+          doc.setTextColor(51, 65, 85);
+          const lines = processText(section.content);
+
+          lines.forEach(line => {
+            if (cursorY > pageHeight - 20) {
+              doc.addPage();
+              cursorY = 20;
+            }
+            doc.text(line, margin, cursorY);
+            cursorY += 6;
+          });
+          cursorY += 10;
+        });
+      } else {
+        const lines = processText(tip.content);
+        lines.forEach(line => {
+          if (cursorY > pageHeight - 20) {
+            doc.addPage();
+            cursorY = 20;
+          }
+          doc.text(line, margin, cursorY);
+          cursorY += 6;
+        });
+      }
+
+      // 6. Footer
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`Healthcare App • Health Tips • Page ${i} of ${totalPages}`, margin, pageHeight - 10);
+      }
+
+      doc.save(`${tip.title ? tip.title.replace(/\s+/g, '_') : 'health_tip'}.pdf`);
       showToastMessage('PDF downloaded successfully!', 'success');
+
     } catch (error) {
       console.error('Error generating PDF:', error);
-      showToastMessage('Could not download PDF cleanly due to restricted external images. Please use window Print.', 'error');
+      showToastMessage('Failed to trigger download. Generating print view...', 'error');
+      // Final fallback to browser print if programmatic fails
+      window.print();
     } finally {
       setIsDownloading(false);
     }

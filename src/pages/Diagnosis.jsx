@@ -14,14 +14,14 @@ const Diagnosis = () => {
       step++;
       const progress = step / steps;
       setAnimatedStats({
-        reports: Math.round(96 * progress),
-        score: Math.round(95 * progress),
-        risks: Math.round(2 * progress),
+        reports: Math.round(4 * progress),
+        score: Math.round(94 * progress),
+        risks: Math.round(0 * progress),
       });
 
       if (step >= steps) {
         clearInterval(timer);
-        setAnimatedStats({ reports: 96, score: 95, risks: 2 });
+        setAnimatedStats({ reports: 4, score: 94, risks: 0 });
       }
     }, interval);
 
@@ -31,23 +31,23 @@ const Diagnosis = () => {
   const diagnoses = [
     {
       id: 1,
-      title: 'No Anemia Detected',
+      title: 'Optimal Glucose Homeostasis',
       status: 'good',
-      description: 'Hemoglobin levels are within normal range (13.5-17.5 g/dL for males)',
+      description: 'Fasting glucose level is optimal at 94 mg/dL per your latest screening.',
       icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
     },
     {
       id: 2,
-      title: 'Borderline Cholesterol',
-      status: 'warning',
-      description: 'LDL cholesterol slightly elevated at 135 mg/dL (optimal: below 100 mg/dL)',
-      icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+      title: 'Positive Metabolic Drift',
+      status: 'good',
+      description: 'Your Glucose levels have improved significantly over previous readings.',
+      icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'
     },
     {
       id: 3,
-      title: 'Normal Blood Sugar',
+      title: 'Diabetes Risk: Minimal',
       status: 'good',
-      description: 'Fasting glucose level is normal at 95 mg/dL',
+      description: 'Current physiological markers indicate stable glycemic control with low probability of metabolic disorder.',
       icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
     },
   ];
@@ -55,22 +55,22 @@ const Diagnosis = () => {
   const advice = [
     {
       id: 1,
-      title: 'Dietary Changes',
-      description: 'Reduce saturated fat intake. Include more fiber-rich foods like oats, beans, and fruits. Limit red meat consumption to twice a week.',
+      title: 'Glycemic Maintenance',
+      description: 'Continue your current dietary balance. Focus on complex carbohydrates and avoid rapid-spike sugars to maintain stability.',
       icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
       color: '#06b6d4'
     },
     {
       id: 2,
-      title: 'Exercise Routine',
-      description: 'Engage in moderate aerobic exercise for at least 150 minutes per week. Include activities like walking, swimming, or cycling.',
+      title: 'Physical Activity Consistency',
+      description: 'Moderate aerobic exercise (30 mins daily) is key to your current metabolic success. This helps in natural insulin sensitivity.',
       icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
       color: '#22c55e'
     },
     {
       id: 3,
-      title: 'Follow-up Testing',
-      description: 'Schedule a lipid panel test in 3 months to monitor cholesterol levels. Continue annual comprehensive blood work.',
+      title: 'Quarterly Monitoring',
+      description: 'Schedule your next fasting glucose check in 3 months to verify continued stability in your primary health marker.',
       icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
       color: '#8b5cf6'
     },
@@ -109,13 +109,13 @@ const Diagnosis = () => {
                     <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
-                    <span className="text-sm font-medium">Latest Report: <span className="text-green-400 font-bold">July 15, 2024</span></span>
+                    <span className="text-sm font-medium">Latest Report: <span className="text-green-400 font-bold">June 15, 2024</span></span>
                   </div>
                   <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/10">
                     <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
-                    <span className="text-sm font-medium">Total Diagnoses: <span className="text-cyan-400 font-bold">3</span></span>
+                    <span className="text-sm font-medium">Total Reports: <span className="text-cyan-400 font-bold">4</span></span>
                   </div>
                 </div>
               </div>
@@ -146,7 +146,7 @@ const Diagnosis = () => {
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-bold text-gray-800">Medical Summary Report</h2>
-              <p className="text-gray-500">Generated on July 15, 2024</p>
+              <p className="text-gray-500">Generated on June 15, 2024</p>
             </div>
             <div className="flex items-center gap-3">
               <span className="px-4 py-2 bg-white text-green-700 rounded-xl font-semibold text-sm border border-green-200">
