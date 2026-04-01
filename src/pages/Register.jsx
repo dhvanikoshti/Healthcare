@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { auth, db } from '../firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, updateProfile, signInWithPopup } from "firebase/auth";
+import { auth, db, googleProvider } from '../firebase';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { getSystemFingerprint, getSystemName, getBrowserName } from '../utils/deviceFingerprint';
 import CustomSelect from '../components/CustomSelect';
 
@@ -16,6 +16,96 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registerError, setRegisterError] = useState('');
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsSubmitting(true);
+      setRegisterError('');
+      
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Check if user exists in Firestore
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        // Create new user document if they are signing in for the first time via Google
+        await setDoc(userRef, {
+          uid: user.uid,
+          name: user.displayName || 'Google User',
+          email: user.email,
+          dob: '',
+          gender: '',
+          bloodGroup: '',
+          contactNumber: '',
+          role: 'user', // Default role
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      // Record Session Info
+      const systemId = getSystemFingerprint();
+      const systemName = getSystemName();
+      const browserName = getBrowserName();
+
+      const sessionRef = doc(db, 'users', user.uid, 'sessions', systemId);
+      const sessionSnap = await getDoc(sessionRef);
+
+      let sessionId;
+      if (sessionSnap.exists()) {
+        sessionId = sessionSnap.data().sessionId;
+        await setDoc(sessionRef, {
+          lastActive: serverTimestamp(),
+          deviceName: `${browserName} on ${systemName}`,
+          browser: browserName,
+          userAgent: window.navigator.userAgent
+        }, { merge: true });
+      } else {
+        sessionId = Math.random().toString(36).substring(2, 15);
+        const sessionData = {
+          sessionId,
+          systemId,
+          deviceName: `${browserName} on ${systemName}`,
+          userAgent: window.navigator.userAgent,
+          loginTime: serverTimestamp(),
+          lastActive: serverTimestamp(),
+          browser: browserName,
+          os: systemName
+        };
+        await setDoc(sessionRef, sessionData);
+      }
+
+      localStorage.setItem('currentSessionId', sessionId);
+
+      setIsSubmitting(false);
+      setShowSuccess(true);
+      setTimeout(() => {
+        let isAdmin = false;
+        if (userSnap.exists() && userSnap.data().role === 'admin') {
+          isAdmin = true;
+        }
+        if (user.email && user.email.toLowerCase() === 'dhvanikoshti26@gmail.com') {
+          isAdmin = true;
+        }
+
+        if (isAdmin) {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
+      }, 1500);
+
+    } catch (error) {
+      console.error('Google Sign-In Error:', error);
+      setIsSubmitting(false);
+      if (error.code === 'auth/popup-closed-by-user') {
+        setRegisterError('Google sign-in was cancelled.');
+      } else {
+        setRegisterError(`Failed to register with Google: ${error.message}`);
+      }
+    }
+  };
 
   const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
   const genders = ['Male', 'Female', 'Other'];
@@ -322,7 +412,12 @@ const Register = () => {
               <div className="flex-grow border-t-2 border-gray-200"></div>
             </div>
 
-            <button type="button" className="w-full py-2.5 md:py-3.5 bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 font-semibold text-sm md:text-base rounded-lg flex items-center justify-center gap-3 transition-all duration-300 hover:shadow-lg">
+            <button 
+              type="button" 
+              onClick={handleGoogleSignIn}
+              disabled={isSubmitting}
+              className="w-full py-2.5 md:py-3.5 bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 font-semibold text-sm md:text-base rounded-lg flex items-center justify-center gap-3 transition-all duration-300 hover:shadow-lg disabled:opacity-50"
+            >
               <svg className="w-5 h-5 md:w-6 md:h-6" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />

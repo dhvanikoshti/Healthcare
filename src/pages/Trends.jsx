@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ReferenceArea } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, ReferenceLine, Cell } from 'recharts';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import CustomSelect from '../components/CustomSelect';
@@ -20,6 +20,7 @@ const TrendAnalysis = () => {
   const [compareReport2, setCompareReport2] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedTestName, setSelectedTestName] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -76,14 +77,141 @@ const TrendAnalysis = () => {
     }
   ];
 
+  // const fetchUserReports = async (userId) => {
+  //   setIsLoading(true);
+  //   try {
+  //     // Locking to the professional 4-report diabetes dataset
+  //     setReports(staticDiabetesReports);
+  //     setExtractedMedicalData(staticDiabetesReports);
+  //     setHasReports(true);
+  //     setSelectedReport(staticDiabetesReports[3]); // Latest is index 3 now
+  //   } catch (err) {
+  //     console.error('Error fetching user reports:', err);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
   const fetchUserReports = async (userId) => {
     setIsLoading(true);
     try {
-      // Locking to the professional 4-report diabetes dataset
-      setReports(staticDiabetesReports);
-      setExtractedMedicalData(staticDiabetesReports);
-      setHasReports(true);
-      setSelectedReport(staticDiabetesReports[3]); // Latest is index 3 now
+      // Fetch all reports from Firebase, ordered by date
+      const q = query(collection(db, 'users', userId, 'reports'), orderBy('createdAt', 'asc'));
+      const snapshot = await getDocs(q);
+
+      const fetchedReports = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        let flattenedMedicalData = [];
+
+        console.log('📋 Report:', data.name, '| Status:', data.status, '| Has analysis:', !!data.analysis);
+
+        if (data.analysis && typeof data.analysis === 'object') {
+          const analysis = data.analysis;
+          console.log('🔍 Analysis keys:', Object.keys(analysis));
+
+          // Helper: extract tests from various possible structures
+          const extractTests = (obj) => {
+            const results = [];
+
+            // Format 1: lab_report → [{category, tests: [{test_name, result, unit, ...}]}]
+            const labReport = obj.lab_report || obj.labReport || obj.lab_results || obj.labResults;
+            if (Array.isArray(labReport)) {
+              labReport.forEach(category => {
+                const tests = category.tests || category.test_results || category.parameters || [];
+                if (Array.isArray(tests)) {
+                  tests.forEach(test => {
+                    results.push({
+                      testName: test.test_name || test.testName || test.name || test.parameter || 'Unknown',
+                      testValue: String(test.result || test.value || test.testValue || test.reading || ''),
+                      units: test.unit || test.units || test.uom || '',
+                      referenceRange: test.reference_interval || test.referenceRange || test.normal_range || test.ref_range || '',
+                      status: determineStatus(test.flag || test.status || '')
+                    });
+                  });
+                }
+              });
+            }
+
+            // Format 2: Direct tests/results array → [{test_name, result, ...}]
+            const directTests = obj.tests || obj.test_results || obj.results || obj.parameters || obj.findings;
+            if (results.length === 0 && Array.isArray(directTests)) {
+              directTests.forEach(test => {
+                if (test && typeof test === 'object') {
+                  results.push({
+                    testName: test.test_name || test.testName || test.name || test.parameter || test.test || 'Unknown',
+                    testValue: String(test.result || test.value || test.testValue || test.reading || ''),
+                    units: test.unit || test.units || test.uom || '',
+                    referenceRange: test.reference_interval || test.referenceRange || test.normal_range || test.ref_range || '',
+                    status: determineStatus(test.flag || test.status || '')
+                  });
+                }
+              });
+            }
+
+            // Format 3: Search any array property that looks like test data
+            if (results.length === 0) {
+              for (const key of Object.keys(obj)) {
+                const val = obj[key];
+                if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'object') {
+                  const sample = val[0];
+                  const hasTestFields = sample.test_name || sample.testName || sample.name || sample.parameter;
+                  const hasValueFields = sample.result || sample.value || sample.testValue || sample.reading;
+                  if (hasTestFields && hasValueFields) {
+                    console.log(`📦 Found test data in .${key}`);
+                    val.forEach(test => {
+                      results.push({
+                        testName: test.test_name || test.testName || test.name || test.parameter || 'Unknown',
+                        testValue: String(test.result || test.value || test.testValue || test.reading || ''),
+                        units: test.unit || test.units || test.uom || '',
+                        referenceRange: test.reference_interval || test.referenceRange || test.normal_range || test.ref_range || '',
+                        status: determineStatus(test.flag || test.status || '')
+                      });
+                    });
+                    break;
+                  }
+                }
+              }
+            }
+
+            return results;
+          };
+
+          const determineStatus = (flag) => {
+            if (!flag) return 'Normal';
+            const f = flag.toLowerCase();
+            if (f.includes('high') || f.includes('low') || f.includes('abnormal') || f.includes('critical')) return 'Abnormal';
+            if (f.includes('borderline') || f.includes('moderate')) return 'Borderline';
+            return 'Normal';
+          };
+
+          flattenedMedicalData = extractTests(analysis);
+          console.log(`✅ Extracted ${flattenedMedicalData.length} test parameters for report: ${data.name}`);
+        }
+
+        return {
+          id: docSnap.id,
+          reportName: data.name,
+          reportDate: data.date,
+          medicalData: flattenedMedicalData,
+          hasAnalysis: !!data.analysis,
+          textAnalysis: data.analysis?.text_analysis || null,
+          abnormalParams: data.analysis?.abnormal_parameters || [],
+          risks: data.analysis?.risks || data.analysis?.risk_assessment || [],
+          overallHealth: data.analysis?.overall_health || null,
+          totalAbnormals: data.analysis?.total_abnormals || 0,
+          totalTests: data.analysis?.total_tests || flattenedMedicalData.length
+        };
+      });
+
+      // Include reports that have analysis data (even if no structured tests found)
+      const analyzedReports = fetchedReports.filter(r => r.medicalData.length > 0 || r.textAnalysis);
+
+      setReports(fetchedReports);
+      setExtractedMedicalData(analyzedReports);
+      setHasReports(analyzedReports.length > 0);
+      if (analyzedReports.length > 0) {
+        setSelectedReport(analyzedReports[analyzedReports.length - 1]);
+      }
     } catch (err) {
       console.error('Error fetching user reports:', err);
     } finally {
@@ -170,6 +298,24 @@ const TrendAnalysis = () => {
 
   const currentReportData = getCurrentReportData();
   const chartData = generateTrendData();
+
+  // Dynamic test names
+  const allTestNames = [...new Set(
+    extractedMedicalData.flatMap(r => (r.medicalData || []).map(t => t.testName))
+  )];
+
+  useEffect(() => {
+    if (allTestNames.length > 0 && !selectedTestName) {
+      setSelectedTestName(allTestNames[0]);
+    }
+  }, [extractedMedicalData.length]);
+
+  const chartLineData = selectedTestName ? extractedMedicalData
+    .filter(report => report.medicalData?.some(t => t.testName === selectedTestName))
+    .map(report => {
+      const test = report.medicalData.find(t => t.testName === selectedTestName);
+      return { name: report.reportDate, value: parseFloat(test.testValue) };
+    }) : [];
 
   // Risk analysis functions
   const analyzeRisk = (testName, testValue) => {
@@ -265,7 +411,7 @@ const TrendAnalysis = () => {
               <p className="text-cyan-100 text-lg">Extracted Medical Data</p>
               {reports.length === 1 && (
                 <div className="flex items-center gap-4 mt-6">
-                  <span className="text-cyan-100">{reports[0].name} • {reports[0].date}</span>
+                  <span className="text-cyan-100">{reports[0].reportName} • {reports[0].reportDate}</span>
                 </div>
               )}
             </div>
@@ -357,7 +503,7 @@ const TrendAnalysis = () => {
           <div className="premium-card p-16 text-center">
             <h2 className="text-2xl font-bold text-gray-800 mb-3">Please Upload Your Reports</h2>
             <p className="text-gray-500 mb-8">Upload your medical reports to analyze health fluctuations and trends.</p>
-            <Link to="/upload-report" className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-600 text-white rounded-xl font-medium hover:bg-cyan-700">
+            <Link to="/upload" className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-600 text-white rounded-xl font-medium hover:bg-cyan-700">
               Upload Reports
             </Link>
           </div>
@@ -413,156 +559,280 @@ const TrendAnalysis = () => {
           </div>
         </div> */}
 
-        {/* Diagnostic Chart */}
-        <div className="bg-white rounded-[2.5rem] p-8 lg:p-12 shadow-lg border border-slate-100 mb-12 relative">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-12">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-800 tracking-tight uppercase mb-1">Glucose Fluctuation Matrix</h2>
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.1em]">Parameter: Fasting Blood Sugar (FBS)</p>
+        {/* Report Selector */}
+
+        {/* Abnormal Fluctuation Overview — Area Profile Chart Format */}
+        {selectedReport && selectedReport.abnormalParams && selectedReport.abnormalParams.length > 0 && (() => {
+          // Helper to parse reference ranges (e.g. "4000 - 10000", "< 150", "> 20")
+          const parseRange = (refStr) => {
+            if (!refStr) return null;
+            const clean = refStr.replace(/[^0-9.\-<>]/g, ' ').trim();
+            if (clean.includes('-')) {
+              const [min, max] = clean.split('-').map(v => parseFloat(v));
+              return { min, max };
+            }
+            if (clean.startsWith('<')) return { min: 0, max: parseFloat(clean.slice(1)) };
+            if (clean.startsWith('>')) {
+              const min = parseFloat(clean.slice(1));
+              return { min, max: min * 2 };
+            }
+            return null;
+          };
+
+          const chartData = (selectedReport.abnormalParams || [])
+            .slice(0, 10)
+            .map(p => {
+              const val = parseFloat(p.result);
+              const ref = parseRange(p.reference_interval);
+              const isHigh = (p.flag || '').toUpperCase().includes('H') || (p.flag || '').toLowerCase().includes('high');
+              const isLow = (p.flag || '').toUpperCase() === 'L' || (p.flag || '').toLowerCase().includes('low');
+
+              let fluctuation = 0;
+              if (!isNaN(val) && ref) {
+                if (val > ref.max) fluctuation = Math.min(((val - ref.max) / ref.max) * 100, 100);
+                else if (val < ref.min) fluctuation = Math.max(((val - ref.min) / (ref.min || 1)) * 100, -100);
+              } else {
+                fluctuation = isHigh ? 50 : isLow ? -50 : 25;
+              }
+
+              return {
+                name: (p.test_name || p.name || 'Test').substring(0, 12),
+                fullName: p.test_name || p.name || 'Test',
+                value: fluctuation,
+                originalValue: p.result,
+                unit: p.unit || '',
+                status: isHigh ? 'High' : isLow ? 'Low' : 'Abnormal',
+                refRange: p.reference_interval || 'N/A'
+              };
+            });
+
+          if (chartData.length === 0) return null;
+
+          return (
+            <div className="bg-slate-50 rounded-[3rem] p-6 lg:p-10 mb-12 border border-slate-100/50 shadow-inner">
+              <div className="bg-slate-100/50 rounded-[2.5rem] p-8 lg:p-12 shadow-2xl shadow-slate-200/40 border border-white/40 backdrop-blur-sm">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center shadow-lg shadow-slate-300">
+                      <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black text-slate-800 tracking-tight uppercase leading-tight">Fluctuation Profile</h2>
+                      <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Diagnostic health deviation context</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6 p-4 bg-white/50 rounded-2xl border border-white/50 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm shadow-red-200"></div>
+                      <span className="text-[10px] font-black text-slate-600 uppercase tracking-tighter">Above Normal</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-200"></div>
+                      <span className="text-[10px] font-black text-slate-600 uppercase tracking-tighter">Below Normal</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-[350px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
+                      <defs>
+                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
+                          <stop offset="50%" stopColor="#ef4444" stopOpacity={0} />
+                          <stop offset="50%" stopColor="#3b82f6" stopOpacity={0} />
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.4} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: '900', letterSpacing: '0.5px' }}
+                        dy={10}
+                      />
+                      <YAxis domain={[-100, 100]} hide />
+                      <Tooltip
+                        cursor={{ stroke: '#cbd5e1', strokeWidth: 2 }}
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            const isHigh = data.value > 0;
+                            return (
+                              <div className="bg-slate-900 border-none rounded-[2rem] p-6 shadow-2xl ring-1 ring-white/10">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{data.fullName}</p>
+                                <div className="flex items-baseline gap-2 mb-4">
+                                  <span className="text-3xl font-black text-white">{data.originalValue}</span>
+                                  <span className="text-xs font-bold text-slate-400 leading-none">{data.unit}</span>
+                                </div>
+                                <div className="pt-4 border-t border-white/5 space-y-3">
+                                  <div className="flex items-center justify-between gap-6">
+                                    <span className="text-[9px] font-black text-slate-500 uppercase">Fluctuation:</span>
+                                    <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${isHigh ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'}`}>
+                                      {isHigh ? '↑' : '↓'} {Math.abs(Math.round(data.value))}%
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-6">
+                                    <span className="text-[9px] font-black text-slate-500 uppercase">Ref Range:</span>
+                                    <span className="text-[10px] font-black text-white">{data.refRange}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" label={{ position: 'top', value: 'NORMAL', fill: '#94a3b8', fontSize: 8, fontWeight: '900' }} />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="#0f172a"
+                        strokeWidth={4}
+                        fillOpacity={1}
+                        fill="url(#colorValue)"
+                        dot={{ r: 6, fill: '#0f172a', strokeWidth: 3, stroke: '#fff' }}
+                        activeDot={{ r: 10, fill: '#0f172a', strokeWidth: 0 }}
+                        animationDuration={1500}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Normal</span>
+          );
+        })()}
+        {/* Single Parameter Trend Analysis */}
+        {/* {allTestNames.length > 0 && (
+          <div className="bg-white rounded-[2.5rem] p-8 lg:p-12 shadow-lg border border-slate-100 mb-12 relative">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-12">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-800 tracking-tight uppercase mb-1">{selectedTestName || 'Test'} Trend</h2>
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.1em]">Track this parameter across all uploads</p>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Borderline</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-rose-400"></div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Critical</span>
-              </div>
+              <select
+                value={selectedTestName}
+                onChange={(e) => setSelectedTestName(e.target.value)}
+                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 shadow-sm"
+              >
+                {allTestNames.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="h-[400px] -ml-4">
+              {chartLineData.length > 1 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartLineData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="10 10" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '800' }} dy={15} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '800' }} domain={['auto', 'auto']} />
+                    <Tooltip
+                      cursor={{ stroke: '#e2e8f0', strokeWidth: 2 }}
+                      contentStyle={{ backgroundColor: '#1E293B', border: 'none', borderRadius: '20px', padding: '20px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}
+                      itemStyle={{ color: '#38bdf8', fontWeight: '900', fontSize: '20px' }}
+                      labelStyle={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '11px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}
+                    />
+                    <Line type="monotone" dataKey="value" stroke="#0ea5e9" strokeWidth={6} dot={{ fill: '#0ea5e9', r: 8, strokeWidth: 4, stroke: '#fff' }} activeDot={{ r: 12, strokeWidth: 0, fill: '#1E293B' }} animationDuration={2000} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                  <p className="font-medium text-lg mb-2">Upload more reports to see trends</p>
+                  <p className="text-sm">Trend visualization requires at least 2 reports with the same test</p>
+                </div>
+              )}
             </div>
           </div>
+        )} */}
 
-          <div className="h-[450px] -ml-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData[0] ? extractedMedicalData.map((report, i) => ({
-                name: report.reportDate,
-                value: parseFloat(report.medicalData[0].testValue)
-              })) : []} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
-                <defs>
-                  <linearGradient id="glucoseGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="10 10" stroke="#f1f5f9" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '800' }}
-                  dy={15}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '800' }}
-                  domain={[0, 150]}
-                />
-                <Tooltip
-                  cursor={{ stroke: '#e2e8f0', strokeWidth: 2 }}
-                  contentStyle={{
-                    backgroundColor: '#1E293B',
-                    border: 'none',
-                    borderRadius: '20px',
-                    padding: '20px',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-                  }}
-                  itemStyle={{ color: '#38bdf8', fontWeight: '900', fontSize: '20px' }}
-                  labelStyle={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '11px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}
-                />
 
-                {/* Visual Risk Zones */}
-                <ReferenceArea y1={0} y2={100} fill="#10b981" fillOpacity={0.03} />
-                <ReferenceArea y1={100} y2={126} fill="#f59e0b" fillOpacity={0.05} />
-                <ReferenceArea y1={126} y2={150} fill="#ef4444" fillOpacity={0.05} />
 
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#0ea5e9"
-                  strokeWidth={8}
-                  dot={{ fill: '#0ea5e9', r: 10, strokeWidth: 5, stroke: '#fff' }}
-                  activeDot={{ r: 14, strokeWidth: 0, fill: '#1E293B' }}
-                  animationDuration={3000}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* History Ledger Table */}
-        <div className="bg-white rounded-[2.5rem] shadow-lg border border-slate-100 overflow-hidden">
-          <div className="px-10 py-8 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-slate-800 uppercase tracking-tight">Diagnostic History Ledger</h2>
-              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Verified Clinical Records</p>
+        {/* Full Report Data — All tests from the selected report */}
+        {selectedReport && (
+          <div className="bg-white rounded-[2.5rem] shadow-lg border border-slate-100 overflow-hidden">
+            <div className="px-8 lg:px-10 py-8 bg-slate-50/50 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800 uppercase tracking-tight">Report Analysis</h2>
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
+                    {selectedReport.reportDate} — {selectedReport.reportName}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-4 py-2 bg-cyan-50 text-cyan-700 rounded-xl text-xs font-bold uppercase">
+                    {selectedReport.medicalData?.length || 0} Parameters
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
-              <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
-              </svg>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left bg-white">
-                  <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Diagnostic Period</th>
-                  <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Test Parameter</th>
-                  <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Diagnostic Value</th>
-                  <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Homeostasis Status</th>
-                  <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Net Drift</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {extractedMedicalData.map((report, idx) => {
-                  const currentValue = parseFloat(report.medicalData[0].testValue);
-                  const priorValue = idx > 0 ? parseFloat(extractedMedicalData[idx - 1].medicalData[0].testValue) : null;
-                  const drift = priorValue ? currentValue - priorValue : null;
-                  const status = getStatusBadge(report.medicalData[0].status);
-
-                  return (
-                    <tr key={idx} className="hover:bg-slate-50 transition-colors group">
-                      <td className="px-10 py-6">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-slate-700">{report.reportDate}</span>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase">Diagnosis ID: #{idx + 1042}</span>
-                        </div>
-                      </td>
-                      <td className="px-10 py-6">
-                        <span className="text-sm font-bold text-slate-600">Glucose (Fasting)</span>
-                      </td>
-                      <td className="px-10 py-6">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-lg font-bold text-slate-800">{currentValue}</span>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase">mg/dL</span>
-                        </div>
-                      </td>
-                      <td className="px-10 py-6">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-bold uppercase tracking-tighter" style={{ backgroundColor: `${status.bg}`, color: status.text }}>
-                          {status.icon} {status.label}
-                        </div>
-                      </td>
-                      <td className="px-10 py-6">
-                        {drift !== null ? (
-                          <div className={`flex items-center gap-1 font-bold ${drift <= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                            {drift <= 0 ? '↓' : '↑'} {Math.abs(drift).toFixed(1)}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left bg-white">
+                    <th className="px-8 lg:px-10 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">#</th>
+                    <th className="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Test Parameter</th>
+                    <th className="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Result</th>
+                    <th className="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Unit</th>
+                    <th className="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Reference Range</th>
+                    <th className="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {(selectedReport.medicalData || []).map((test, idx) => {
+                    const status = getStatusBadge(test.status);
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-8 lg:px-10 py-5">
+                          <span className="text-xs font-bold text-slate-300">{idx + 1}</span>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className="text-sm font-bold text-slate-700">{test.testName}</span>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className="text-lg font-bold text-slate-800">{test.testValue}</span>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className="text-xs font-medium text-slate-500">{test.units || '—'}</span>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className="text-xs font-medium text-slate-500">{test.referenceRange || '—'}</span>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-bold uppercase tracking-tighter" style={{ backgroundColor: status.bg, color: status.text }}>
+                            {status.icon} {status.label}
                           </div>
-                        ) : (
-                          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Reference Point</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {(!selectedReport.medicalData || selectedReport.medicalData.length === 0) && (
+                <div className="px-8 lg:px-10 py-10">
+                  {selectedReport.textAnalysis ? (
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        AI Analysis Report
+                      </h3>
+                      <div className="bg-slate-50 rounded-2xl p-6 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                        {selectedReport.textAnalysis}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center text-slate-400">
+                      <p className="font-medium">No structured test data found in this report</p>
+                      <p className="text-sm mt-1">The n8n workflow may need to return data in JSON format with lab_report, tests, or results fields</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </Layout>
   );

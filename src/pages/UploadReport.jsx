@@ -3,7 +3,7 @@ import Layout from '../components/Layout';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import {
-  collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp
+  collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp, updateDoc
 } from 'firebase/firestore';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import CustomSelect from '../components/CustomSelect';
@@ -96,6 +96,60 @@ const UploadReport = () => {
   };
 
   // ─── Upload handler (Base64 → Firestore, no Storage plan needed) ──────────
+  // const handleUpload = useCallback(async (file) => {
+  //   if (!currentUser) {
+  //     setUploadError('You must be logged in to upload reports.');
+  //     return;
+  //   }
+  //   if (!file) return;
+
+  //   // File size check
+  //   const maxMB = 10; // Cloudinary handled larger files better than Base64
+  //   if (file.size > maxMB * 1024 * 1024) {
+  //     setUploadError(`File too large. Please upload a file under ${maxMB} MB.`);
+  //     return;
+  //   }
+
+  //   setUploadError(null);
+  //   setUploadProgress(0);
+  //   setUploadSuccess(false);
+
+  //   try {
+  //     setUploadProgress(20); // Initializing upload
+
+  //     // Upload to Cloudinary
+  //     const result = await uploadToCloudinary(file);
+  //     const fileUrl = result.secure_url;
+
+  //     setUploadProgress(80); // Processing on Firebase
+
+  //     const reportData = {
+  //       name: file.name,
+  //       date: new Date().toISOString().split('T')[0],
+  //       type: file.type.includes('pdf') ? 'pdf' : 'image',
+  //       size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+  //       fileData: fileUrl,   // Cloudinary URL instead of base64
+  //       createdAt: serverTimestamp(),
+  //       medicalData: generateSimulatedMedicalData(),
+  //     };
+
+  //     await addDoc(collection(db, 'users', currentUser.uid, 'reports'), reportData);
+
+  //     setUploadProgress(100);
+  //     await fetchReports(currentUser);
+  //     setUploadSuccess(true);
+  //   } catch (err) {
+  //     console.error('Upload error:', err);
+  //     setUploadError(err.message || 'Failed to upload report. Please try again.');
+  //   } finally {
+  //     setTimeout(() => {
+  //       setUploadProgress(null);
+  //       setUploadSuccess(false);
+  //       setSelectedFile(null);
+  //     }, 3000);
+  //   }
+  // }, [currentUser, fetchReports]);
+
   const handleUpload = useCallback(async (file) => {
     if (!currentUser) {
       setUploadError('You must be logged in to upload reports.');
@@ -103,8 +157,7 @@ const UploadReport = () => {
     }
     if (!file) return;
 
-    // File size check
-    const maxMB = 10; // Cloudinary handled larger files better than Base64
+    const maxMB = 10;
     if (file.size > maxMB * 1024 * 1024) {
       setUploadError(`File too large. Please upload a file under ${maxMB} MB.`);
       return;
@@ -115,29 +168,121 @@ const UploadReport = () => {
     setUploadSuccess(false);
 
     try {
-      setUploadProgress(20); // Initializing upload
+      setUploadProgress(15);
 
-      // Upload to Cloudinary
+      // 1. Upload the file to Cloudinary to get the viewing URL
       const result = await uploadToCloudinary(file);
       const fileUrl = result.secure_url;
+      setUploadProgress(40);
 
-      setUploadProgress(80); // Processing on Firebase
-
+      // 2. Save basic report to Firebase FIRST (so it always appears)
       const reportData = {
         name: file.name,
         date: new Date().toISOString().split('T')[0],
         type: file.type.includes('pdf') ? 'pdf' : 'image',
         size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-        fileData: fileUrl,   // Cloudinary URL instead of base64
+        fileData: fileUrl,
         createdAt: serverTimestamp(),
-        medicalData: generateSimulatedMedicalData(),
+        status: 'Processing',
+        analysis: null
       };
 
-      await addDoc(collection(db, 'users', currentUser.uid, 'reports'), reportData);
+      const docRef = await addDoc(collection(db, 'users', currentUser.uid, 'reports'), reportData);
+      console.log('✅ Report saved to Firebase:', docRef.id);
+      setUploadProgress(60);
+
+      // 3. Send to n8n for AI Analysis
+      try {
+        const formData = new FormData();
+        formData.append('data', file);
+        formData.append('sessionId', currentUser.uid);
+
+        console.log('🚀 Sending to n8n webhook...');
+        const n8nResponse = await fetch('http://localhost:5678/webhook-test/medical-report-analyze', {
+          method: 'POST',
+          body: formData,
+        });
+
+        console.log('📡 n8n response status:', n8nResponse.status, n8nResponse.statusText);
+
+        if (n8nResponse.ok) {
+          setUploadProgress(80);
+
+          // Try to parse the response - handle both JSON and text
+          let responseText = await n8nResponse.text();
+          console.log('📥 Raw n8n response text (first 500 chars):', responseText.substring(0, 500));
+
+          let aiAnalysisData = null;
+
+          // Try parsing as JSON first
+          try {
+            aiAnalysisData = JSON.parse(responseText);
+          } catch(e) {
+            console.log('📝 Response is not direct JSON, trying to extract JSON from text...');
+            
+            // Strategy 1: Extract JSON from markdown code blocks ```json ... ```
+            const jsonBlockMatch = responseText.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
+            if (jsonBlockMatch) {
+              try {
+                aiAnalysisData = JSON.parse(jsonBlockMatch[1].trim());
+                console.log('📦 Extracted JSON from markdown code block');
+              } catch(e2) { /* not valid JSON in code block */ }
+            }
+
+            // Strategy 2: Find the first { or [ and try to parse from there
+            if (!aiAnalysisData) {
+              const firstBrace = responseText.indexOf('{');
+              const firstBracket = responseText.indexOf('[');
+              const startIdx = firstBrace >= 0 && (firstBracket < 0 || firstBrace < firstBracket) ? firstBrace : firstBracket;
+              if (startIdx >= 0) {
+                const jsonCandidate = responseText.substring(startIdx);
+                try {
+                  aiAnalysisData = JSON.parse(jsonCandidate);
+                  console.log('📦 Extracted JSON starting from position', startIdx);
+                } catch(e3) {
+                  // Try to find matching closing brace/bracket
+                  const closingChar = responseText[startIdx] === '{' ? '}' : ']';
+                  const lastClose = responseText.lastIndexOf(closingChar);
+                  if (lastClose > startIdx) {
+                    try {
+                      aiAnalysisData = JSON.parse(responseText.substring(startIdx, lastClose + 1));
+                      console.log('📦 Extracted JSON between matched braces');
+                    } catch(e4) { /* still not valid */ }
+                  }
+                }
+              }
+            }
+
+            // Strategy 3: If nothing worked, save as text analysis
+            if (!aiAnalysisData) {
+              console.log('📝 No JSON found in text, saving as text_analysis');
+              aiAnalysisData = { text_analysis: responseText };
+            }
+          }
+
+          console.log('✅ Final analysis data type:', typeof aiAnalysisData);
+          console.log('✅ Final analysis keys:', Object.keys(aiAnalysisData));
+          console.log('✅ Full analysis data:', JSON.stringify(aiAnalysisData, null, 2));
+
+          // 5. Update the Firebase document with AI analysis
+          await updateDoc(doc(db, 'users', currentUser.uid, 'reports', docRef.id), {
+            analysis: aiAnalysisData,
+            status: 'Analyzed'
+          });
+          console.log('✅ Analysis saved to Firebase for doc:', docRef.id);
+        } else {
+          const errorText = await n8nResponse.text();
+          console.warn('⚠️ n8n returned error status:', n8nResponse.status, errorText.substring(0, 200));
+        }
+      } catch (n8nErr) {
+        console.warn('⚠️ n8n not available:', n8nErr.message);
+        // Report is already saved to Firebase without analysis
+      }
 
       setUploadProgress(100);
       await fetchReports(currentUser);
       setUploadSuccess(true);
+
     } catch (err) {
       console.error('Upload error:', err);
       setUploadError(err.message || 'Failed to upload report. Please try again.');
@@ -184,7 +329,7 @@ const UploadReport = () => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      
+
       setToastMsg(`Successfully downloaded ${report.name.substring(0, 15)}${report.name.length > 15 ? '...' : ''}`);
     } catch (error) {
       console.error("Error downloading file", error);
@@ -283,7 +428,7 @@ const UploadReport = () => {
           {/* Upload Card */}
           <div className="lg:col-span-2 flex flex-col">
             <div className="premium-card overflow-hidden h-full flex flex-col">
-            <div className="px-5 py-3 bg-white border-b border-gray-100">
+              <div className="px-5 py-3 bg-white border-b border-gray-100">
                 <h2 className="text-md font-bold text-gray-800 flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { auth, db } from '../firebase';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { auth, db, googleProvider } from '../firebase';
+import { signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup } from 'firebase/auth';
 import { doc, getDoc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getSystemFingerprint, getSystemName, getBrowserName } from '../utils/deviceFingerprint';
 
@@ -35,6 +35,101 @@ const Login = () => {
         setLoginError('No account found with this email address.');
       } else {
         setLoginError('Failed to send reset email. Please try again.');
+      }
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsSubmitting(true);
+    setLoginError('');
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Check if user exists in Firestore
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+
+      let isAdmin = false;
+
+      if (!userSnap.exists()) {
+        // Create new user document if they are signing in for the first time via Google
+        await setDoc(userRef, {
+          uid: user.uid,
+          name: user.displayName || 'Google User',
+          email: user.email,
+          dob: '',
+          gender: '',
+          bloodGroup: '',
+          contactNumber: '',
+          role: 'user', // Default role
+          createdAt: serverTimestamp(),
+        });
+      } else {
+        // User exists, retrieve role
+        const userData = userSnap.data();
+        if (userData.role === 'admin') {
+          isAdmin = true;
+        }
+      }
+
+      // Hardcoded fallback for the primary admin email
+      if (user.email && user.email.toLowerCase() === 'dhvanikoshti26@gmail.com') {
+        isAdmin = true;
+      }
+
+      // Record Session Info
+      const systemId = getSystemFingerprint();
+      const systemName = getSystemName();
+      const browserName = getBrowserName();
+
+      const sessionRef = doc(db, 'users', user.uid, 'sessions', systemId);
+      const sessionSnap = await getDoc(sessionRef);
+
+      let sessionId;
+      if (sessionSnap.exists()) {
+        sessionId = sessionSnap.data().sessionId;
+        await setDoc(sessionRef, {
+          lastActive: serverTimestamp(),
+          deviceName: `${browserName} on ${systemName}`,
+          browser: browserName,
+          userAgent: window.navigator.userAgent
+        }, { merge: true });
+      } else {
+        sessionId = Math.random().toString(36).substring(2, 15);
+        const sessionData = {
+          sessionId,
+          systemId,
+          deviceName: `${browserName} on ${systemName}`,
+          userAgent: window.navigator.userAgent,
+          loginTime: serverTimestamp(),
+          lastActive: serverTimestamp(),
+          browser: browserName,
+          os: systemName
+        };
+        await setDoc(sessionRef, sessionData);
+      }
+
+      localStorage.setItem('currentSessionId', sessionId);
+
+      setIsSubmitting(false);
+      setLoginSuccess(true);
+
+      setTimeout(() => {
+        if (isAdmin) {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
+      }, 1000);
+
+    } catch (error) {
+      console.error('Google Sign-In Error:', error);
+      setIsSubmitting(false);
+      if (error.code === 'auth/popup-closed-by-user') {
+        setLoginError('Google sign-in was cancelled.');
+      } else {
+        setLoginError(`Failed to login with Google: ${error.message}`);
       }
     }
   };
@@ -304,7 +399,9 @@ const Login = () => {
 
               <button
                 type="button"
-                className="w-full py-4 bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-semibold rounded-lg flex items-center justify-center gap-3 transition-all"
+                onClick={handleGoogleSignIn}
+                disabled={isSubmitting}
+                className="w-full py-4 bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-semibold rounded-lg flex items-center justify-center gap-3 transition-all disabled:opacity-50"
               >
                 <svg className="w-6 h-6" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />

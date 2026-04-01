@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');
+
 @import "tailwindcss";
 
 /* Custom animations */
@@ -145,7 +145,7 @@ html, body {
   color: white;
 }
 
-/* Global Background - Pure White */
+
 body {
   background-color: white !important;
 }

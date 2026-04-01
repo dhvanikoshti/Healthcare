@@ -81,7 +81,7 @@ const Reports = () => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      
+
       setToastMsg(`Successfully downloaded ${report.name.substring(0, 15)}${report.name.length > 15 ? '...' : ''}`);
     } catch (error) {
       console.error("Error downloading file", error);
@@ -142,15 +142,38 @@ const Reports = () => {
 
     const risks = medicalData.filter(t => t.status === 'Abnormal' || t.status === 'Borderline').length;
 
+    // Extract real analysis data from n8n
+    const analysisRisks = report.analysis?.risks || [];
+    const analysisAbnormal = report.analysis?.abnormal_parameters || [];
+    const analysisAdvice = report.analysis?.advice || report.analysis?.recommendations || [];
+
+    const riskText = analysisRisks.length > 0
+      ? analysisRisks.map(r => `\u2022 ${r.risk_name || r.name}: ${r.reason || r.description || ''}`).join('\n')
+      : (risks > 0 ? `Detected ${risks} abnormal/borderline tests.` : 'All tests within normal range.');
+
+    const diagnosisText = analysisAbnormal.length > 0
+      ? analysisAbnormal.map(p => `\u2022 ${p.test_name} (${p.flag}): ${p.result} ${p.unit}`).join('\n')
+      : (risks > 0 ? 'Follow up recommended for flagged parameters.' : 'All parameters are normal.');
+
+    let adviceText = '';
+    if (Array.isArray(analysisAdvice) && analysisAdvice.length > 0) {
+      adviceText = analysisAdvice.map((a, i) => {
+        if (typeof a === 'string') return `${i + 1}. ${a}`;
+        return `${i + 1}. ${a.title || a.name || ''}: ${a.description || a.detail || a.text || ''}`;
+      }).join('\n');
+    } else {
+      adviceText = risks > 0 ? 'Consult your doctor for abnormal tests.' : 'Continue regular checkups and maintain a healthy lifestyle.';
+    }
+
     return {
       ...report,
       category: report.category || 'Blood Test',
       status: report.status || 'Analyzed',
       hemoglobin: avgHemoglobin,
       risks,
-      riskAssessment: report.riskAssessment || (risks > 0 ? `Detected ${risks} abnormal/borderline tests.` : 'All tests normal.'),
-      diagnosis: report.diagnosis || (risks > 0 ? 'Follow up recommended' : 'Normal results'),
-      advice: report.advice || (risks > 0 ? 'Consult doctor for abnormal tests.' : 'Continue regular checkups.'),
+      riskAssessment: riskText,
+      diagnosis: diagnosisText,
+      advice: adviceText,
       originalDocument: null
     };
   });
@@ -682,61 +705,74 @@ const Reports = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 bg-white overflow-auto">
-              <div className="w-full min-h-full p-6 md:p-10 lg:p-12">
-                {/* Risk Assessment Section */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-red-100 flex items-center justify-center shadow-sm">
-                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
+            <div className="flex-1 bg-gray-50 overflow-auto">
+              <div className="w-full min-h-full px-4 pt-2 pb-4 md:px-8 md:pt-4 md:pb-6 lg:px-8 lg:pt-4 lg:pb-6">
+                {/* Combined Analysis Card */}
+                <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-xl w-full mx-auto">
+                  {/* Risk Assessment Section */}
+                  <div className="mb-8">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 rounded-xl bg-white border border-red-100 flex items-center justify-center shadow-sm">
+                        <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900">Risk Assessment</h3>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900">Risk Assessment</h3>
-                  </div>
-                  <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                    <p className="text-gray-700">{selectedReport.riskAssessment}</p>
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className="text-sm text-gray-500">Risk Level:</span>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold bg-white border ${selectedReport.risks >= 3 ? 'border-red-200 text-red-700' :
-                        selectedReport.risks >= 1 ? 'border-yellow-200 text-yellow-700' :
-                          'border-green-200 text-green-700'
-                        }`}>
-                        {selectedReport.risks >= 3 ? 'High Risk' :
-                          selectedReport.risks >= 1 ? 'Moderate Risk' :
-                            'Low Risk'}
-                      </span>
+                    <div className="pl-4 border-l-2 border-red-100 ml-6">
+                      <p className="text-gray-700 leading-relaxed text-lg" style={{ whiteSpace: 'pre-line' }}>{selectedReport.riskAssessment}</p>
+                      <div className="mt-4 flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-500">Risk Level:</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold bg-white border shadow-sm ${selectedReport.risks >= 3 ? 'border-red-200 text-red-700' : selectedReport.risks >= 1 ? 'border-yellow-200 text-yellow-700' : 'border-green-200 text-green-700'}`}>
+                          {selectedReport.risks >= 3 ? 'High Risk' : selectedReport.risks >= 1 ? 'Moderate Risk' : 'Low Risk'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Diagnosis Section */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-blue-100 flex items-center justify-center shadow-sm">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900">Diagnosis</h3>
-                  </div>
-                  <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                    <p className="text-gray-700">{selectedReport.diagnosis}</p>
-                  </div>
-                </div>
+                  <div className="border-t border-gray-200 my-8"></div>
 
-                {/* Advice Section */}
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-green-100 flex items-center justify-center shadow-sm">
-                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
+                  {/* Diagnosis Section */}
+                  <div className="mb-8">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 rounded-xl bg-white border border-blue-100 flex items-center justify-center shadow-sm">
+                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900">Diagnosis</h3>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900">Advice</h3>
+                    <div className="pl-4 border-l-2 border-blue-100 ml-6">
+                      <p className="text-gray-700 leading-relaxed text-lg" style={{ whiteSpace: 'pre-line' }}>{selectedReport.diagnosis}</p>
+                    </div>
                   </div>
-                  <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                    <p className="text-gray-700">{selectedReport.advice}</p>
+
+                  <div className="border-t border-gray-200 my-8"></div>
+
+                  {/* Advice Section */}
+                  <div className="mb-8">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 rounded-xl bg-white border border-green-100 flex items-center justify-center shadow-sm">
+                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900">Advice</h3>
+                    </div>
+                    <div className="pl-4 border-l-2 border-green-100 ml-6">
+                      <p className="text-gray-700 leading-relaxed text-lg" style={{ whiteSpace: 'pre-line' }}>{selectedReport.advice}</p>
+                    </div>
+                  </div>
+
+                  {/* View Full Insights Link */}
+                  <div className="border-t border-gray-200 pt-6 mt-4">
+                    <Link
+                      to={`/health-insights?reportId=${selectedReport.id}`}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-[#263B6A] text-white rounded-xl font-semibold hover:bg-[#1e3058] transition-all shadow-md hover:shadow-lg"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                      View Detailed Health Insights
+                    </Link>
                   </div>
                 </div>
               </div>

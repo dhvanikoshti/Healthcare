@@ -1,166 +1,236 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { db, auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 
 const HealthInsights = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const location = useLocation();
   const reportId = searchParams.get('reportId');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [reportData, setReportData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [hasReports, setHasReports] = useState(false);
-  const [activeTab, setActiveTab] = useState('risk');
+  const [riskData, setRiskData] = useState([]);
+  const [diagnoses, setDiagnoses] = useState([]);
+  const [advice, setAdvice] = useState([]);
+  const initialTab = location.pathname === '/diagnosis' ? 'diagnosis' : 'risk';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [animatedScores, setAnimatedScores] = useState({});
-  const [animatedStats, setAnimatedStats] = useState({ reports: 0, score: 0, risks: 0 });
+
+  const hasReports = !!reportData;
 
   useEffect(() => {
-    const storedReports = localStorage.getItem('userReports');
-    setHasReports(!!storedReports && JSON.parse(storedReports).length > 0);
+    const unsub = onAuthStateChanged(auth, u => setCurrentUser(u));
+    return () => unsub();
   }, []);
 
-  // Risk Data from user feedback (static)
-  const riskData = [
-    {
-      id: 1,
-      name: 'Diabetes Risk',
-      score: 24,
-      status: 'Normal',
-      description: 'Your diabetes risk is well managed. Fasting glucose levels exhibit a positive metabolic drift down to 94 mg/dL.',
-      recommendations: ['Maintain complex carbohydrates', '30 minutes daily aerobic exercise', 'Quarterly HbA1c screening'],
-      icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
-    }
-  ];
-
-  // Diagnosis data from user feedback
-  const diagnoses = [
-    {
-      id: 1,
-      title: 'Optimal Glucose Homeostasis',
-      status: 'good',
-      description: 'Fasting glucose level is optimal at 94 mg/dL per your latest screening.',
-      icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
-    },
-    {
-      id: 2,
-      title: 'Positive Metabolic Drift',
-      status: 'good',
-      description: 'Your Glucose levels have improved significantly over previous readings.',
-      icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'
-    },
-    {
-      id: 3,
-      title: 'Diabetes Risk: Minimal',
-      status: 'good',
-      description: 'Current physiological markers indicate stable glycemic control with low probability of metabolic disorder.',
-      icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
-    },
-  ];
-
-  // Advice data from user feedback
-  const advice = [
-    {
-      id: 1,
-      title: 'Glycemic Maintenance',
-      description: 'Continue your current dietary balance. Focus on complex carbohydrates and avoid rapid-spike sugars to maintain stability.',
-      icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
-      color: '#06b6d4'
-    },
-    {
-      id: 2,
-      title: 'Physical Activity Consistency',
-      description: 'Moderate aerobic exercise (30 mins daily) is key to your current metabolic success. This helps in natural insulin sensitivity.',
-      icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
-      color: '#22c55e'
-    },
-    {
-      id: 3,
-      title: 'Quarterly Monitoring',
-      description: 'Schedule your next fasting glucose check in 3 months to verify continued stability in your primary health marker.',
-      icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-      color: '#8b5cf6'
-    },
-  ];
-
-  // Lifestyle data
-  const lifestyle = [
-    { icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', title: 'Exercise', desc: '30 mins daily moderate activity' },
-    { icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', title: 'Diet', desc: 'Balanced, low-fat meals' },
-    { icon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z', title: 'Sleep', desc: '7-8 hours per night' },
-    { icon: 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Stress Management', desc: 'Meditation and relaxation' },
-  ];
-
-  // Risk Animation Effect
   useEffect(() => {
-    const duration = 1500;
-    const steps = 60;
-    const interval = duration / steps;
-    let step = 0;
-    const timer = setInterval(() => {
-      step++;
-      const progress = step / steps;
-      const newScores = {};
-      riskData.forEach(risk => {
-        newScores[risk.id] = Math.round(risk.score * progress);
-      });
-      setAnimatedScores(newScores);
-      if (step >= steps) clearInterval(timer);
-    }, interval);
-    return () => clearInterval(timer);
-  }, []);
+    const fetchReport = async () => {
+      if (!currentUser) { setIsLoading(false); return; }
+      try {
+        let data = null;
+        if (reportId) {
+          const snap = await getDoc(doc(db, 'users', currentUser.uid, 'reports', reportId));
+          if (snap.exists()) data = snap.data();
+        } else {
+          const q = query(collection(db, 'users', currentUser.uid, 'reports'), orderBy('createdAt', 'desc'), limit(1));
+          const snap = await getDocs(q);
+          if (!snap.empty) data = snap.docs[0].data();
+        }
+        if (data) {
+          setReportData(data);
+          const adviceColors = ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'];
+          const analysis = data.analysis || {};
 
-  // Stats Animation
+          console.log('🔍 Health Insights - Analysis keys:', Object.keys(analysis));
+
+          // Flexible key search for risks
+          const risksRaw = analysis.risks || analysis.risk_assessment || analysis.risk || analysis.health_risks || [];
+          const mappedRisks = (Array.isArray(risksRaw) ? risksRaw : []).map((risk, i) => {
+            let status = 'Normal', score = 25;
+            const sev = (risk.severity || risk.level || risk.risk_level || '').toUpperCase();
+            if (sev === 'HIGH' || sev === 'CRITICAL') { status = 'Critical'; score = 85; }
+            else if (sev === 'MEDIUM' || sev === 'MODERATE') { status = 'Borderline'; score = 60; }
+            return {
+              id: i + 1, name: risk.risk_name || risk.name || risk.title || risk.condition || `Risk ${i + 1}`,
+              score, status, description: risk.reason || risk.description || risk.detail || risk.explanation || '',
+              icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+            };
+          });
+          setRiskData(mappedRisks);
+
+          // Flexible key search for diagnosis/abnormal parameters
+          const diagRaw = analysis.abnormal_parameters || analysis.diagnosis || analysis.diagnoses || analysis.findings || analysis.abnormalities || [];
+          const mappedDiag = (Array.isArray(diagRaw) ? diagRaw : []).map((p, i) => ({
+            id: i + 1,
+            title: p.test_name ? `${p.test_name} Flagged as ${p.flag || 'Abnormal'}` : (p.title || p.name || p.finding || `Finding ${i + 1}`),
+            status: (p.flag || p.status || p.severity || '').toLowerCase().includes('high') ? 'critical' : 'warning',
+            description: p.result ? `Result: ${p.result} ${p.unit || ''}. Reference range is ${p.reference_interval || 'N/A'}.` : (p.description || p.detail || p.explanation || ''),
+            icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
+          }));
+          setDiagnoses(mappedDiag);
+
+          // Flexible key search for advice
+          const rawAdvice = analysis.advice || analysis.recommendations || analysis.suggestions || analysis.health_advice || analysis.tips || [];
+          let mappedAdvice = [];
+          
+          if (Array.isArray(rawAdvice) && rawAdvice.length > 0) {
+            mappedAdvice = rawAdvice.map((item, i) => {
+              if (typeof item === 'string') return { id: i + 1, title: item.length > 60 ? item.slice(0, 60) + '...' : item, description: item, color: adviceColors[i % adviceColors.length] };
+              return { id: i + 1, title: item.title || item.name || item.recommendation || `Advice ${i + 1}`, description: item.description || item.detail || item.text || item.explanation || '', color: adviceColors[i % adviceColors.length] };
+            });
+          }
+
+          // If no explicit advice, generate it from abnormal parameters (personalized)
+          if (mappedAdvice.length === 0 && (mappedDiag.length > 0 || mappedRisks.length > 0)) {
+            console.log('📝 Generating advice from findings...');
+            
+            // Priority 1: High Risks from Risk Assessment
+            const highRisks = mappedRisks.filter(r => r.status === 'Critical');
+            highRisks.forEach((risk, i) => {
+              mappedAdvice.push({
+                id: mappedAdvice.length + 1,
+                title: `Action Required: ${risk.name}`,
+                description: `High risk detected. ${risk.description} Immediate consultation with a healthcare professional is strongly advised to discuss specific management for ${risk.name}.`,
+                color: '#ef4444' // Red for high risk
+              });
+            });
+
+            // Priority 2: Abnormal Parameters grouped by category
+            const adviceMap = {
+              'H': { prefix: 'Elevated', action: 'Lowering' },
+              'L': { prefix: 'Reduced', action: 'Improving' },
+              'High': { prefix: 'Elevated', action: 'Lowering' },
+              'Low': { prefix: 'Reduced', action: 'Improving' }
+            };
+
+            const byCategory = {};
+            diagRaw.forEach(p => {
+              const cat = p.category || 'General Health';
+              if (!byCategory[cat]) byCategory[cat] = [];
+              byCategory[cat].push(p);
+            });
+
+            Object.entries(byCategory).forEach(([category, params], i) => {
+              // Only generate advice for categories that haven't been covered by high risks already
+              if (mappedAdvice.some(a => a.title.toLowerCase().includes(category.toLowerCase()))) return;
+
+              const highFlags = params.filter(p => (p.flag || '').toUpperCase() === 'H' || (p.flag || '').toLowerCase().includes('high'));
+              const flaggedItems = params.map(p => p.test_name || p.name).join(', ');
+              const isHigh = highFlags.length > 0;
+              
+              mappedAdvice.push({
+                id: mappedAdvice.length + 1,
+                title: `${category} Management`,
+                description: `${isHigh ? 'Elevated' : 'Abnormal'} levels found in: ${flaggedItems}. ${isHigh ? 'Your risk assessment for this diagnosis is elevated. ' : ''}Regular monitoring and lifestyle adjustments are recommended for ${isHigh ? 'lowering' : 'managing'} these metrics.`,
+                color: isHigh ? '#ef4444' : adviceColors[(i + highRisks.length) % adviceColors.length]
+              });
+            });
+          }
+
+          // If text_analysis exists and no structured data found, parse text into sections
+          if (mappedRisks.length === 0 && mappedDiag.length === 0 && mappedAdvice.length === 0 && analysis.text_analysis) {
+            console.log('📝 Parsing text_analysis into sections...');
+            const text = analysis.text_analysis;
+
+            // Parse bullet points or numbered items as advice
+            const lines = text.split('\n').filter(l => l.trim());
+            const bulletItems = lines.filter(l => /^[\s]*[-•*\d+.)]/.test(l)).map(l => l.replace(/^[\s]*[-•*\d+.)]\s*/, '').trim());
+
+            if (bulletItems.length > 0) {
+              mappedAdvice = bulletItems.map((item, i) => ({
+                id: i + 1,
+                title: item.length > 80 ? item.slice(0, 80) + '...' : item,
+                description: item,
+                color: adviceColors[i % adviceColors.length]
+              }));
+            } else {
+              // Split text into paragraphs as advice items
+              const paragraphs = text.split('\n\n').filter(p => p.trim().length > 20);
+              mappedAdvice = paragraphs.slice(0, 6).map((p, i) => ({
+                id: i + 1,
+                title: p.trim().split('\n')[0].substring(0, 80),
+                description: p.trim(),
+                color: adviceColors[i % adviceColors.length]
+              }));
+            }
+          }
+
+          setAdvice(mappedAdvice);
+        }
+      } catch (err) { console.error("Error fetching report:", err); }
+      finally { setIsLoading(false); }
+    };
+    fetchReport();
+  }, [currentUser, reportId]);
+
   useEffect(() => {
-    const duration = 1500;
-    const steps = 60;
-    const interval = duration / steps;
-    let step = 0;
-    const timer = setInterval(() => {
-      step++;
-      const progress = step / steps;
-      setAnimatedStats({
-        reports: Math.round(4 * progress),
-        score: Math.round(94 * progress),
-        risks: Math.round(0 * progress)
-      });
-      if (step >= steps) {
-        clearInterval(timer);
-        setAnimatedStats({ reports: 4, score: 94, risks: 0 });
-      }
-    }, interval);
-    return () => clearInterval(timer);
-  }, []);
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Normal': return { bg: '#FFFFFF', text: '#16a34a', border: '#86efac', iconBg: '#22c55e' };
-      case 'Borderline': return { bg: '#FFFFFF', text: '#d97706', border: '#fcd34d', iconBg: '#f59e0b' };
-      case 'Critical': return { bg: '#FFFFFF', text: '#dc2626', border: '#fca5a5', iconBg: '#ef4444' };
-      default: return { bg: '#FFFFFF', text: '#6b7280', border: '#d1d5db', iconBg: '#9ca3af' };
-    }
-  };
-
-  const getProgressColor = (status) => {
-    switch (status) {
-      case 'Normal': return '#22c55e';
-      case 'Borderline': return '#f59e0b';
-      case 'Critical': return '#ef4444';
-      default: return '#9ca3af';
-    }
-  };
-
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case 'good': return { bg: '#FFFFFF', text: '#16a34a', border: '#86efac', iconBg: '#22c55e' };
-      case 'warning': return { bg: '#FFFFFF', text: '#d97706', border: '#fcd34d', iconBg: '#f59e0b' };
-      case 'critical': return { bg: '#FFFFFF', text: '#dc2626', border: '#fca5a5', iconBg: '#ef4444' };
-      default: return { bg: '#FFFFFF', text: '#6b7280', border: '#d1d5db', iconBg: '#9ca3af' };
-    }
-  };
+    if (riskData.length === 0) return;
+    const intervals = [];
+    riskData.forEach(risk => {
+      let cur = 0;
+      const iv = setInterval(() => {
+        cur += 1;
+        setAnimatedScores(prev => ({ ...prev, [risk.id]: Math.min(cur, risk.score) }));
+        if (cur >= risk.score) clearInterval(iv);
+      }, 15);
+      intervals.push(iv);
+    });
+    return () => intervals.forEach(clearInterval);
+  }, [riskData]);
 
   const summaryStats = {
     normal: riskData.filter(r => r.status === 'Normal').length,
     borderline: riskData.filter(r => r.status === 'Borderline').length,
     critical: riskData.filter(r => r.status === 'Critical').length,
   };
+
+  const getOverallRisk = () => {
+    if (summaryStats.critical > 0) return 'High';
+    if (summaryStats.borderline > 0) return 'Moderate';
+    return 'Low';
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Critical': return { border: '#fca5a5', text: '#dc2626' };
+      case 'Borderline': return { border: '#fcd34d', text: '#d97706' };
+      case 'Normal': return { border: '#86efac', text: '#16a34a' };
+      default: return { border: '#d1d5db', text: '#6b7280' };
+    }
+  };
+
+  const getProgressColor = (status) => {
+    switch (status) {
+      case 'Critical': return '#dc2626';
+      case 'Borderline': return '#d97706';
+      case 'Normal': return '#16a34a';
+      default: return '#6b7280';
+    }
+  };
+
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case 'critical': return { border: '#fca5a5', text: '#dc2626', iconBg: '#dc2626' };
+      case 'warning': return { border: '#fcd34d', text: '#d97706', iconBg: '#d97706' };
+      case 'good': return { border: '#86efac', text: '#16a34a', iconBg: '#16a34a' };
+      default: return { border: '#d1d5db', text: '#6b7280', iconBg: '#6b7280' };
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="w-16 h-16 border-4 border-cyan-100 border-t-cyan-600 rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-500 font-medium">Loading health insights...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -176,13 +246,9 @@ const HealthInsights = () => {
                 </div>
                 <h1 className="text-3xl font-bold text-gray-800 mb-4">Get Your Health Insights</h1>
                 <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                  Upload your medical report to unlock comprehensive risk assessment, detailed diagnosis,
-                  and personalized health advice tailored specifically for you.
+                  Upload your medical report to unlock comprehensive risk assessment, detailed diagnosis, and personalized health advice.
                 </p>
-                <a
-                  href="/upload-report"
-                  className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold rounded-2xl shadow-2xl hover:shadow-3xl hover:scale-[1.02] transition-all duration-300 text-lg"
-                >
+                <a href="/upload" className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold rounded-2xl shadow-2xl hover:scale-[1.02] transition-all duration-300 text-lg">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
@@ -201,35 +267,22 @@ const HealthInsights = () => {
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold mb-2">Health Insights</h1>
                   <p className="text-cyan-100 text-lg">Risk Assessment + Diagnosis & Advice</p>
-                  {reportId && (
+                  {reportData?.name && (
                     <div className="flex items-center gap-4 mt-3 p-3 bg-white/10 rounded-xl">
-                      <span className="text-cyan-200 font-medium">Report ID: {reportId}</span>
+                      <span className="text-cyan-200 font-medium">{reportData.name} • {reportData.date}</span>
                     </div>
                   )}
                 </div>
-
               </div>
             </div>
 
             {/* Tab Navigation */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-1 mb-8">
               <div className="flex bg-white rounded-xl overflow-hidden">
-                <button
-                  onClick={() => setActiveTab('risk')}
-                  className={`flex-1 py-4 px-6 font-bold transition-all duration-300 rounded-xl ${activeTab === 'risk'
-                    ? 'bg-gray-100 text-[#263B6A] shadow-inner'
-                    : 'text-gray-500 hover:text-[#263B6A] hover:bg-gray-50'
-                    }`}
-                >
+                <button onClick={() => setActiveTab('risk')} className={`flex-1 py-4 px-6 font-bold transition-all duration-300 rounded-xl ${activeTab === 'risk' ? 'bg-gray-100 text-[#263B6A] shadow-inner' : 'text-gray-500 hover:text-[#263B6A] hover:bg-gray-50'}`}>
                   🛡️ Risk Assessment
                 </button>
-                <button
-                  onClick={() => setActiveTab('diagnosis')}
-                  className={`flex-1 py-4 px-6 font-bold transition-all duration-300 rounded-xl ${activeTab === 'diagnosis'
-                    ? 'bg-gray-100 text-[#263B6A] shadow-inner'
-                    : 'text-gray-500 hover:text-[#263B6A] hover:bg-gray-50'
-                    }`}
-                >
+                <button onClick={() => setActiveTab('diagnosis')} className={`flex-1 py-4 px-6 font-bold transition-all duration-300 rounded-xl ${activeTab === 'diagnosis' ? 'bg-gray-100 text-[#263B6A] shadow-inner' : 'text-gray-500 hover:text-[#263B6A] hover:bg-gray-50'}`}>
                   🩺 Diagnosis & Advice
                 </button>
               </div>
@@ -237,7 +290,6 @@ const HealthInsights = () => {
 
             {activeTab === 'risk' && (
               <div>
-                {/* Alert Section */}
                 {summaryStats.borderline > 0 && (
                   <div className="bg-white border-l-4 border-amber-500 rounded-2xl p-6 mb-8 shadow-lg border border-gray-100">
                     <div className="flex items-start gap-4">
@@ -254,58 +306,57 @@ const HealthInsights = () => {
                   </div>
                 )}
 
-                {/* Risk Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  {riskData.map((risk) => {
-                    const statusStyle = getStatusColor(risk.status);
-                    const progressColor = getProgressColor(risk.status);
-                    const score = animatedScores[risk.id] || 0;
-                    return (
-                      <div
-                        key={risk.id}
-                        className="bg-white rounded-2xl shadow-lg border-2 overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                        style={{ borderColor: statusStyle.border }}
-                      >
-                        <div className="p-6">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-xl flex items-center justify-center border border-gray-100" style={{ backgroundColor: '#FFFFFF' }}>
-                                <svg className="w-6 h-6" style={{ color: statusStyle.text }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={risk.icon} />
-                                </svg>
+                {riskData.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-6 mb-8">
+                    {riskData.map((risk) => {
+                      const statusStyle = getStatusColor(risk.status);
+                      const progressColor = getProgressColor(risk.status);
+                      const score = animatedScores[risk.id] || 0;
+                      return (
+                        <div key={risk.id} className="bg-white rounded-2xl shadow-lg border-2 overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1" style={{ borderColor: statusStyle.border }}>
+                          <div className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center border border-gray-100" style={{ backgroundColor: '#FFFFFF' }}>
+                                  <svg className="w-6 h-6" style={{ color: statusStyle.text }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={risk.icon} />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <h3 className="text-lg font-bold text-gray-800">{risk.name}</h3>
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#FFFFFF', color: statusStyle.text, borderColor: statusStyle.border }}>
+                                    {risk.status}
+                                  </span>
+                                </div>
                               </div>
-                              <div>
-                                <h3 className="text-lg font-bold text-gray-800">{risk.name}</h3>
-                                <span className="px-2 py-0.5 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#FFFFFF', color: statusStyle.text, borderColor: statusStyle.border }}>
-                                  {risk.status}
-                                </span>
+                              <div className="text-right">
+                                <p className="text-3xl font-bold" style={{ color: progressColor }}>{score}%</p>
+                                <p className="text-xs text-gray-500">Risk Score</p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-3xl font-bold" style={{ color: progressColor }}>{score}%</p>
-                              <p className="text-xs text-gray-500">Risk Score</p>
+                            <div className="mb-6">
+                              <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${score}%`, backgroundColor: progressColor }}></div>
+                              </div>
+                              <div className="flex justify-between mt-1 text-xs text-gray-400">
+                                <span>0</span><span>50</span><span>100</span>
+                              </div>
                             </div>
+                            <p className="text-gray-600 text-sm mb-4">{risk.description}</p>
                           </div>
-
-                          {/* Progress Bar */}
-                          <div className="mb-6">
-                            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${score}%`, backgroundColor: progressColor }}></div>
-                            </div>
-                            <div className="flex justify-between mt-1 text-xs text-gray-400">
-                              <span>0</span><span>50</span><span>100</span>
-                            </div>
-                          </div>
-
-                          <p className="text-gray-600 text-sm mb-4">{risk.description}</p>
-
-
                         </div>
-
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-2xl p-12 shadow-lg border border-gray-100 text-center mb-8">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-green-50 rounded-2xl flex items-center justify-center">
+                      <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">{reportData?.analysis ? 'No Risks Detected' : 'Analysis Pending'}</h3>
+                    <p className="text-gray-500">{reportData?.analysis ? 'Your report analysis did not identify any health risks.' : 'Your report is being processed. Please check back shortly.'}</p>
+                  </div>
+                )}
 
                 {/* Summary */}
                 <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
@@ -313,38 +364,30 @@ const HealthInsights = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
                     <div className="text-center p-4 bg-white border border-green-100 rounded-xl">
                       <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white border border-green-200 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       </div>
                       <p className="text-3xl font-bold text-green-600">{summaryStats.normal}</p>
                       <p className="text-sm text-gray-600">Normal</p>
                     </div>
                     <div className="text-center p-4 bg-white border border-amber-100 rounded-xl">
                       <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white border border-amber-200 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
+                        <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                       </div>
                       <p className="text-3xl font-bold text-amber-600">{summaryStats.borderline}</p>
                       <p className="text-sm text-gray-600">Borderline</p>
                     </div>
                     <div className="text-center p-4 bg-white border border-red-100 rounded-xl">
                       <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white border border-red-200 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                        <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       </div>
                       <p className="text-3xl font-bold text-red-600">{summaryStats.critical}</p>
                       <p className="text-sm text-gray-600">Critical</p>
                     </div>
                     <div className="text-center p-4 bg-white border border-cyan-100 rounded-xl">
                       <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white border border-cyan-200 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
+                        <svg className="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                       </div>
-                      <p className="text-3xl font-bold text-cyan-600">Low</p>
+                      <p className="text-3xl font-bold text-cyan-600">{getOverallRisk()}</p>
                       <p className="text-sm text-gray-600">Overall</p>
                     </div>
                   </div>
@@ -354,69 +397,37 @@ const HealthInsights = () => {
 
             {activeTab === 'diagnosis' && (
               <div>
-                {/* Medical Summary */}
-                {/* <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-xl border border-gray-200 mb-8">
-                  <div className="flex flex-col lg:flex-row lg:items-center gap-6 mb-6">
-                    <div className="w-16 h-16 rounded-2xl bg-gray-800 flex items-center justify-center">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h2 className="text-xl font-bold text-gray-800">Medical Summary Report</h2>
-                      <p className="text-gray-500">Generated on July 15, 2024</p>
-                    </div>
-                    <span className="px-4 py-2 bg-white text-green-700 rounded-xl font-semibold text-sm border border-green-200 shadow-sm">Good Health</span>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="p-4 bg-white rounded-xl text-center border border-gray-100 shadow-sm">
-                      <p className="text-3xl font-bold text-gray-800">{animatedStats.reports}</p>
-                      <p className="text-sm text-gray-500 mt-1">Reports Analyzed</p>
-                    </div>
-                    <div className="p-4 bg-white rounded-xl text-center border border-gray-100 shadow-sm">
-                      <p className="text-3xl font-bold text-gray-800">{animatedStats.score}</p>
-                      <p className="text-sm text-gray-500 mt-1">Overall Score</p>
-                    </div>
-                    <div className="p-4 bg-white rounded-xl text-center border border-gray-100 shadow-sm">
-                      <p className="text-3xl font-bold text-gray-800">{animatedStats.risks}</p>
-                      <p className="text-sm text-gray-500 mt-1">Risks Found</p>
-                    </div>
-                    <div className="p-4 bg-white rounded-xl text-center border border-gray-100 shadow-sm">
-                      <p className="text-3xl font-bold text-green-600">Good</p>
-                      <p className="text-sm text-gray-500 mt-1">Health Status</p>
-                    </div>
-                  </div>
-                </div> */}
-
                 {/* Diagnosis Section */}
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-8">
                   <div className="px-6 py-4 bg-white border-b border-gray-100">
                     <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                      <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
+                      <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                       Diagnosis
                     </h2>
                   </div>
                   <div className="p-6">
-                    <div className="space-y-4">
-                      {diagnoses.map((diagnosis) => {
-                        const style = getStatusStyle(diagnosis.status);
-                        return (
-                          <div key={diagnosis.id} className="flex items-start gap-4 p-4 rounded-xl transition-all duration-200 border" style={{ backgroundColor: '#FFFFFF', borderColor: style.border }}>
-                            <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 border border-gray-100 shadow-sm" style={{ backgroundColor: 'white' }}>
-                              <svg className="w-5 h-5" style={{ color: style.iconBg }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={diagnosis.icon} />
-                              </svg>
+                    {diagnoses.length > 0 ? (
+                      <div className="space-y-4">
+                        {diagnoses.map((diagnosis) => {
+                          const style = getStatusStyle(diagnosis.status);
+                          return (
+                            <div key={diagnosis.id} className="flex items-start gap-4 p-4 rounded-xl transition-all duration-200 border" style={{ backgroundColor: '#FFFFFF', borderColor: style.border }}>
+                              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 border border-gray-100 shadow-sm" style={{ backgroundColor: 'white' }}>
+                                <svg className="w-5 h-5" style={{ color: style.iconBg }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={diagnosis.icon} /></svg>
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-800 mb-1" style={{ color: style.text }}>{diagnosis.title}</h4>
+                                <p className="text-sm mt-1" style={{ color: '#4b5563' }}>{diagnosis.description}</p>
+                              </div>
                             </div>
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-gray-800 mb-1" style={{ color: style.text }}>{diagnosis.title}</h4>
-                              <p className="text-sm mt-1" style={{ color: '#4b5563' }}>{diagnosis.description}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-400">
+                        <p className="font-medium">{reportData?.analysis ? 'No abnormal parameters found in this report.' : 'Analysis pending — diagnosis will appear once processing completes.'}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -424,61 +435,34 @@ const HealthInsights = () => {
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-8">
                   <div className="px-6 py-4 bg-white border-b border-gray-100">
                     <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                      <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
+                      <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                       Personalized Advice
                     </h2>
                   </div>
                   <div className="p-6">
-                    <div className="space-y-4">
-                      {advice.map((item) => (
-                        <div key={item.id} className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 hover:border-gray-200 transition-all duration-200 hover:shadow-md" style={{ backgroundColor: '#FFFFFF' }}>
-                          <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border border-gray-50 shadow-sm" style={{ backgroundColor: '#FFFFFF' }}>
-                            <span className="text-xl font-bold" style={{ color: item.color }}>{item.id}</span>
+                    {advice.length > 0 ? (
+                      <div className="space-y-4">
+                        {advice.map((item) => (
+                          <div key={item.id} className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 hover:border-gray-200 transition-all duration-200 hover:shadow-md" style={{ backgroundColor: '#FFFFFF' }}>
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border border-gray-50 shadow-sm" style={{ backgroundColor: '#FFFFFF' }}>
+                              <span className="text-xl font-bold" style={{ color: item.color }}>{item.id}</span>
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-800 mb-1">{item.title}</h4>
+                              <p className="text-sm text-gray-600">{item.description}</p>
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-800 mb-1">{item.title}</h4>
-                            <p className="text-sm text-gray-600">{item.description}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-400">
+                        <p className="font-medium">{reportData?.analysis ? 'No personalized advice available for this report.' : 'Advice will appear once report analysis completes.'}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                {/* Lifestyle */}
-                {/* <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-8">
-                  <div className="px-6 py-4 bg-white border-b border-gray-100">
-                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                      <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                      </svg>
-                      Lifestyle Recommendations
-                    </h2>
-                  </div>
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {lifestyle.map((item, index) => (
-                        <div key={index} className="flex items-center gap-4 p-4 rounded-xl bg-white hover:bg-gray-100 transition-colors cursor-pointer group">
-                          <div className="w-12 h-12 rounded-xl bg-white border border-gray-100 flex items-center justify-center group-hover:bg-gray-50 transition-colors">
-                            <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                            </svg>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-gray-800">{item.title}</h4>
-                            <p className="text-sm text-gray-500">{item.desc}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div> */}
               </div>
             )}
-
-
           </>
         )}
       </div>
@@ -487,4 +471,3 @@ const HealthInsights = () => {
 };
 
 export default HealthInsights;
-

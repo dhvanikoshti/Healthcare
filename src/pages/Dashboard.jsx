@@ -160,7 +160,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
         {[
           { title: 'Total Reports', value: stats.totalReports, icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', bg: '#2c5e67ff', light: '#dbe9ebff', badge: 'Reports' },
-          { title: 'Health Score', value: stats.criticalAlerts, icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', bg: '#602727ff', light: '#fee2e2', badge: 'Alerts' },
+          { title: 'Health Score', value: 67, icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', bg: '#602727ff', light: '#fee2e2', badge: 'Alerts' },
           { title: 'Last Checkup', value: stats.lastCheckup, icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', bg: '#9e7f4aff', light: '#fef3c7', badge: 'Checkup' },
           { title: 'Latest Upload', value: stats.latestUpload, icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12', bg: '#2c6854ff', light: '#d1fae5', badge: 'Upload' },
         ].map((c, i) => (
@@ -182,7 +182,7 @@ const Dashboard = () => {
             </div>
 
             <div className="relative z-10 mt-4 lg:mt-5">
-              <p className="text-xl lg:text-2xl font-[500] text-slate-800 tracking-tight tabular-nums truncate md:whitespace-normal" style={{ fontFamily: "'Outfit', sans-serif" }}>{typeof c.value === 'number' ? c.value.toLocaleString() : c.value}</p>
+              <p className="text-xl lg:text-2xl font-[500] text-slate-800 tracking-tight tabular-nums truncate md:whitespace-normal">{typeof c.value === 'number' ? c.value.toLocaleString() : c.value}</p>
               <p className="text-[13px] font-[400] text-slate-500 mt-1 tracking-wide">{c.title}</p>
             </div>
 
