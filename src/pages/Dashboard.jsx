@@ -40,6 +40,7 @@ const Dashboard = () => {
     totalReports: 0,
     criticalAlerts: 0,
     activeRisks: 0,
+    overallHealth: 'Analyzing...',
     latestUpload: 'None',
     lastCheckup: 'None'
   });
@@ -70,9 +71,16 @@ const Dashboard = () => {
 
       // Fetch reports
       const reportsRef = collection(db, 'users', uid, 'reports');
-      const q = query(reportsRef, orderBy('createdAt', 'desc'));
+      const q = query(reportsRef);
       const snapshot = await getDocs(q);
-      const reports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const allReports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Sort client-side to ensure nothing is filtered out
+      const reports = allReports.sort((a, b) => {
+        const da = a.createdAt?.toDate() || new Date(a.date || 0);
+        const db = b.createdAt?.toDate() || new Date(b.date || 0);
+        return db - da; // Newest first
+      });
 
       if (reports.length === 0) {
         setLoading(false);
@@ -97,38 +105,74 @@ const Dashboard = () => {
           yearlyTrend[monthIdx].reports++;
         }
 
-        if (report.medicalData) {
-          report.medicalData.forEach(test => {
-            if (test.status === 'Abnormal') {
-              totalAlerts++;
-              totalRisks++;
-              if (year === currentYear) yearlyTrend[monthIdx].risks++;
-            } else if (test.status === 'Borderline') {
-              totalRisks++;
-              if (year === currentYear) yearlyTrend[monthIdx].risks++;
-            }
+        // Check both legacy medicalData and new analysis structure
+        const analysis = report.analysis || {};
+        const medicalData = report.medicalData || [];
 
-            if (test.testName.toLowerCase().includes('hemoglobin')) {
-              const val = parseFloat(test.testValue);
-              if (!isNaN(val)) {
-                hemoglobinSum += val;
-                hemoglobinCount++;
-                if (year === currentYear) {
-                  // Keep the latest hemoglobin value for that month in the trend
-                  yearlyTrend[monthIdx].hemoglobin = val;
+        // Count abnormalities from medicalData
+        medicalData.forEach(test => {
+          if (test.status === 'Abnormal' || test.status === 'Critical') {
+            totalAlerts++;
+            totalRisks++;
+            if (year === currentYear) yearlyTrend[monthIdx].risks++;
+          } else if (test.status === 'Borderline') {
+            totalRisks++;
+            if (year === currentYear) yearlyTrend[monthIdx].risks++;
+          }
+
+          if (test.testName?.toLowerCase().includes('hemoglobin')) {
+            const val = parseFloat(test.testValue);
+            if (!isNaN(val)) {
+              hemoglobinSum += val;
+              hemoglobinCount++;
+              if (year === currentYear) yearlyTrend[monthIdx].hemoglobin = val;
+            }
+          }
+        });
+
+        // Also count risks from analysis object (if not already counted via medicalData)
+        if (medicalData.length === 0 && analysis) {
+          const risksRaw = analysis.risks || analysis.risk_assessment || [];
+          if (Array.isArray(risksRaw)) {
+            risksRaw.forEach(risk => {
+              totalRisks++;
+              const sev = (risk.severity || risk.level || '').toUpperCase();
+              if (sev === 'HIGH' || sev === 'CRITICAL') totalAlerts++;
+              if (year === currentYear) yearlyTrend[monthIdx].risks++;
+            });
+          }
+
+          // Check for abnormal parameters in analysis
+          const abnParams = analysis.abnormal_parameters || [];
+          if (Array.isArray(abnParams)) {
+            abnParams.forEach(p => {
+              // If not already a risk, count as alert/risk
+              if (p.test_name?.toLowerCase().includes('hemoglobin')) {
+                const val = parseFloat(p.result);
+                if (!isNaN(val)) {
+                  hemoglobinSum += val;
+                  hemoglobinCount++;
+                  if (year === currentYear) yearlyTrend[monthIdx].hemoglobin = val;
                 }
               }
-            }
-          });
+            });
+          }
         }
       });
+
+      const latest = reports[0];
+      const latestAnalysis = latest.analysis || {};
+
+      let overallHealth = latest.overall_health || latestAnalysis.overall_health || 'Stable';
+      if (overallHealth.length > 25) overallHealth = 'Requires Attention';
 
       setStats({
         totalReports: reports.length,
         criticalAlerts: totalAlerts,
         activeRisks: totalRisks,
-        latestUpload: reports[0].name.length > 15 ? reports[0].name.substring(0, 12) + '...' : reports[0].name,
-        lastCheckup: reports[0].date ? new Date(reports[0].date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Recently'
+        overallHealth: overallHealth,
+        latestUpload: latest.name.length > 15 ? latest.name.substring(0, 15) + '...' : latest.name,
+        lastCheckup: latest.date ? new Date(latest.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Recently'
       });
 
       setTrendData(yearlyTrend);
@@ -159,8 +203,8 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
         {[
-          { title: 'Total Reports', value: stats.totalReports, icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', bg: '#2c5e67ff', light: '#dbe9ebff', badge: 'Reports' },
-          { title: 'Health Score', value: 67, icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', bg: '#602727ff', light: '#fee2e2', badge: 'Alerts' },
+          { title: 'Total Reports', value: stats.totalReports, icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0112.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z', bg: '#2c5e67ff', light: '#dbe9ebff', badge: 'History' },
+          { title: 'Overall Health', value: stats.overallHealth, icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', bg: '#602727ff', light: '#fee2e2', badge: (stats.overallHealth || '').toLowerCase().includes('good') || (stats.overallHealth || '').toLowerCase().includes('normal') ? 'Optimal' : 'Review' },
           { title: 'Last Checkup', value: stats.lastCheckup, icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', bg: '#9e7f4aff', light: '#fef3c7', badge: 'Checkup' },
           { title: 'Latest Upload', value: stats.latestUpload, icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12', bg: '#2c6854ff', light: '#d1fae5', badge: 'Upload' },
         ].map((c, i) => (

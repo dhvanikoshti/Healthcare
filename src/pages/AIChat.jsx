@@ -102,7 +102,7 @@ const AIChat = () => {
       });
 
       // Send to n8n Webhook
-      const webhookUrl = 'http://localhost:5678/webhook-test/healthchat'; // Change to /webhook/ in production
+      const webhookUrl = 'http://localhost:5678/webhook/healthchat'; // Change to /webhook/ in production
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {

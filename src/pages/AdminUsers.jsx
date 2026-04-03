@@ -243,8 +243,8 @@ const AdminUsers = () => {
                     {viewUser.status}
                   </span>
                   <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm ${viewUser.riskLevel === 'High' ? 'bg-red-50 border-red-200 text-red-700' :
-                      viewUser.riskLevel === 'Medium' ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                        'bg-green-50 border-green-200 text-green-700'
+                    viewUser.riskLevel === 'Medium' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                      'bg-green-50 border-green-200 text-green-700'
                     }`}>
                     {viewUser.riskLevel} Risk
                   </span>
@@ -315,13 +315,13 @@ const AdminUsers = () => {
                   </div>
                   {/* Stat: Risk */}
                   <div className={`rounded-2xl p-6 text-center shadow-sm border ${viewUser.riskLevel === 'High' ? 'bg-red-50 border-red-100' :
-                      viewUser.riskLevel === 'Medium' ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'
+                    viewUser.riskLevel === 'Medium' ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'
                     }`}>
                     <p className={`text-4xl font-black ${viewUser.riskLevel === 'High' ? 'text-red-600' :
-                        viewUser.riskLevel === 'Medium' ? 'text-amber-500' : 'text-green-600'
+                      viewUser.riskLevel === 'Medium' ? 'text-amber-500' : 'text-green-600'
                       }`}>{viewUser.riskLevel[0]}</p>
                     <p className={`text-[10px] font-bold mt-2 uppercase tracking-widest ${viewUser.riskLevel === 'High' ? 'text-red-600' :
-                        viewUser.riskLevel === 'Medium' ? 'text-amber-500' : 'text-green-600'
+                      viewUser.riskLevel === 'Medium' ? 'text-amber-500' : 'text-green-600'
                       }`}>{viewUser.riskLevel} Risk</p>
                   </div>
                 </div>

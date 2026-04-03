@@ -75,13 +75,13 @@ const AdminAnalytics = () => {
           if (data.dob) {
             const birthDate = new Date(data.dob);
             if (!isNaN(birthDate)) {
-               const age = new Date().getFullYear() - birthDate.getFullYear();
-               if (age >= 18 && age <= 25) ages['18-25']++;
-               else if (age >= 26 && age <= 35) ages['26-35']++;
-               else if (age >= 36 && age <= 45) ages['36-45']++;
-               else if (age >= 46 && age <= 55) ages['46-55']++;
-               else if (age >= 56 && age <= 65) ages['56-65']++;
-               else if (age > 65) ages['65+']++;
+              const age = new Date().getFullYear() - birthDate.getFullYear();
+              if (age >= 18 && age <= 25) ages['18-25']++;
+              else if (age >= 26 && age <= 35) ages['26-35']++;
+              else if (age >= 36 && age <= 45) ages['36-45']++;
+              else if (age >= 46 && age <= 55) ages['46-55']++;
+              else if (age >= 56 && age <= 65) ages['56-65']++;
+              else if (age > 65) ages['65+']++;
             }
           }
         });

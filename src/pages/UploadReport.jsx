@@ -30,6 +30,7 @@ const UploadReport = () => {
 
   // View modal state
   const [viewReport, setViewReport] = useState(null);
+  const [blobUrl, setBlobUrl] = useState(null);
 
   // Toast state
   const [toastMsg, setToastMsg] = useState('');
@@ -95,61 +96,6 @@ const UploadReport = () => {
     });
   };
 
-  // ─── Upload handler (Base64 → Firestore, no Storage plan needed) ──────────
-  // const handleUpload = useCallback(async (file) => {
-  //   if (!currentUser) {
-  //     setUploadError('You must be logged in to upload reports.');
-  //     return;
-  //   }
-  //   if (!file) return;
-
-  //   // File size check
-  //   const maxMB = 10; // Cloudinary handled larger files better than Base64
-  //   if (file.size > maxMB * 1024 * 1024) {
-  //     setUploadError(`File too large. Please upload a file under ${maxMB} MB.`);
-  //     return;
-  //   }
-
-  //   setUploadError(null);
-  //   setUploadProgress(0);
-  //   setUploadSuccess(false);
-
-  //   try {
-  //     setUploadProgress(20); // Initializing upload
-
-  //     // Upload to Cloudinary
-  //     const result = await uploadToCloudinary(file);
-  //     const fileUrl = result.secure_url;
-
-  //     setUploadProgress(80); // Processing on Firebase
-
-  //     const reportData = {
-  //       name: file.name,
-  //       date: new Date().toISOString().split('T')[0],
-  //       type: file.type.includes('pdf') ? 'pdf' : 'image',
-  //       size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-  //       fileData: fileUrl,   // Cloudinary URL instead of base64
-  //       createdAt: serverTimestamp(),
-  //       medicalData: generateSimulatedMedicalData(),
-  //     };
-
-  //     await addDoc(collection(db, 'users', currentUser.uid, 'reports'), reportData);
-
-  //     setUploadProgress(100);
-  //     await fetchReports(currentUser);
-  //     setUploadSuccess(true);
-  //   } catch (err) {
-  //     console.error('Upload error:', err);
-  //     setUploadError(err.message || 'Failed to upload report. Please try again.');
-  //   } finally {
-  //     setTimeout(() => {
-  //       setUploadProgress(null);
-  //       setUploadSuccess(false);
-  //       setSelectedFile(null);
-  //     }, 3000);
-  //   }
-  // }, [currentUser, fetchReports]);
-
   const handleUpload = useCallback(async (file) => {
     if (!currentUser) {
       setUploadError('You must be logged in to upload reports.');
@@ -193,90 +139,67 @@ const UploadReport = () => {
 
       // 3. Send to n8n for AI Analysis
       try {
-        const formData = new FormData();
-        formData.append('data', file);
-        formData.append('sessionId', currentUser.uid);
+        console.log('🚀 Sending raw file to n8n for analysis...');
 
-        console.log('🚀 Sending to n8n webhook...');
-        const n8nResponse = await fetch('http://localhost:5678/webhook-test/medical-report-analyze', {
+        // Use FormData to send the physical file directly to n8n
+        const formData = new FormData();
+        formData.append('data', file); // 'data' is the key Gemini looks for
+        formData.append('fileName', file.name);
+        formData.append('userId', currentUser.uid);
+        formData.append('reportId', docRef.id);
+
+        // Production URL (works even without "Listen for test event")
+        const n8nResponse = await fetch('http://localhost:5678/webhook/medical-report-analyze', {
           method: 'POST',
           body: formData,
         });
 
-        console.log('📡 n8n response status:', n8nResponse.status, n8nResponse.statusText);
+        console.log('📡 n8n response status:', n8nResponse.status);
 
         if (n8nResponse.ok) {
-          setUploadProgress(80);
+          const responseText = await n8nResponse.text();
+          console.log('📡 n8n raw response:', responseText || '(empty body)');
 
-          // Try to parse the response - handle both JSON and text
-          let responseText = await n8nResponse.text();
-          console.log('📥 Raw n8n response text (first 500 chars):', responseText.substring(0, 500));
-
-          let aiAnalysisData = null;
-
-          // Try parsing as JSON first
-          try {
-            aiAnalysisData = JSON.parse(responseText);
-          } catch(e) {
-            console.log('📝 Response is not direct JSON, trying to extract JSON from text...');
-            
-            // Strategy 1: Extract JSON from markdown code blocks ```json ... ```
-            const jsonBlockMatch = responseText.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
-            if (jsonBlockMatch) {
-              try {
-                aiAnalysisData = JSON.parse(jsonBlockMatch[1].trim());
-                console.log('📦 Extracted JSON from markdown code block');
-              } catch(e2) { /* not valid JSON in code block */ }
-            }
-
-            // Strategy 2: Find the first { or [ and try to parse from there
-            if (!aiAnalysisData) {
-              const firstBrace = responseText.indexOf('{');
-              const firstBracket = responseText.indexOf('[');
-              const startIdx = firstBrace >= 0 && (firstBracket < 0 || firstBrace < firstBracket) ? firstBrace : firstBracket;
-              if (startIdx >= 0) {
-                const jsonCandidate = responseText.substring(startIdx);
-                try {
-                  aiAnalysisData = JSON.parse(jsonCandidate);
-                  console.log('📦 Extracted JSON starting from position', startIdx);
-                } catch(e3) {
-                  // Try to find matching closing brace/bracket
-                  const closingChar = responseText[startIdx] === '{' ? '}' : ']';
-                  const lastClose = responseText.lastIndexOf(closingChar);
-                  if (lastClose > startIdx) {
-                    try {
-                      aiAnalysisData = JSON.parse(responseText.substring(startIdx, lastClose + 1));
-                      console.log('📦 Extracted JSON between matched braces');
-                    } catch(e4) { /* still not valid */ }
-                  }
-                }
-              }
-            }
-
-            // Strategy 3: If nothing worked, save as text analysis
-            if (!aiAnalysisData) {
-              console.log('📝 No JSON found in text, saving as text_analysis');
-              aiAnalysisData = { text_analysis: responseText };
-            }
+          if (!responseText) {
+            console.warn('⚠️ n8n returned success (200 OK) but the response body is empty. Please check your n8n Respond to Webhook node configuration.');
+            return;
           }
 
-          console.log('✅ Final analysis data type:', typeof aiAnalysisData);
-          console.log('✅ Final analysis keys:', Object.keys(aiAnalysisData));
-          console.log('✅ Full analysis data:', JSON.stringify(aiAnalysisData, null, 2));
+          let rawData;
+          try {
+            rawData = JSON.parse(responseText);
+          } catch (parseErr) {
+            console.warn('⚠️ n8n responded with non-JSON format:', responseText);
+            return;
+          }
 
-          // 5. Update the Firebase document with AI analysis
-          await updateDoc(doc(db, 'users', currentUser.uid, 'reports', docRef.id), {
-            analysis: aiAnalysisData,
-            status: 'Analyzed'
-          });
-          console.log('✅ Analysis saved to Firebase for doc:', docRef.id);
+          console.log('✅ AI Analysis parsed:', rawData);
+
+          // n8n often returns an array, we need the first item
+          let aiAnalysisData = Array.isArray(rawData) ? rawData[0] : rawData;
+
+          // If n8n returns an item property (standard n8n format for some nodes)
+          if (aiAnalysisData && aiAnalysisData.item && typeof aiAnalysisData.item === 'object') {
+            aiAnalysisData = aiAnalysisData.item;
+          }
+
+          if (aiAnalysisData && typeof aiAnalysisData === 'object' && Object.keys(aiAnalysisData).length > 0) {
+            setUploadProgress(85);
+            // 5. Update the Firebase document with AI analysis
+            await updateDoc(doc(db, 'users', currentUser.uid, 'reports', docRef.id), {
+              analysis: aiAnalysisData,
+              status: 'Analyzed'
+            });
+            console.log('✅ Analysis saved to Firebase for doc:', docRef.id);
+          } else {
+            console.warn('⚠️ n8n data structure is empty or invalid:', aiAnalysisData);
+          }
         } else {
           const errorText = await n8nResponse.text();
-          console.warn('⚠️ n8n returned error status:', n8nResponse.status, errorText.substring(0, 200));
+          console.warn('⚠️ n8n returned error:', n8nResponse.status, errorText);
         }
       } catch (n8nErr) {
-        console.warn('⚠️ n8n not available:', n8nErr.message);
-        // Report is already saved to Firebase without analysis
+        console.error('❌ n8n logic or network error:', n8nErr);
       }
 
       setUploadProgress(100);
@@ -317,9 +240,13 @@ const UploadReport = () => {
 
   // ─── Download handlers ────────────────────────────────────────────────────
   const handleDownload = async (report) => {
-    setToastMsg(`Preparing download...`);
+    if (!report.fileData) return;
+
+    // We try the blob approach first (for custom filename)
+    // If it fails (CORS), we fallback to direct window open
     try {
-      const response = await fetch(report.fileData);
+      const response = await fetch(report.fileData, { mode: 'cors' });
+      if (!response.ok) throw new Error('CORS or Network error');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -329,11 +256,12 @@ const UploadReport = () => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-
       setToastMsg(`Successfully downloaded ${report.name.substring(0, 15)}${report.name.length > 15 ? '...' : ''}`);
     } catch (error) {
-      console.error("Error downloading file", error);
-      setToastMsg('Error: Failed to fetch the target file content.');
+      console.warn("Direct download failed, falling back to new tab access:", error);
+      // Fallback: Just open the URL directly (browser will handle display/download)
+      window.open(report.fileData, '_blank');
+      setToastMsg('Opening report in new tab for download...');
     } finally {
       setTimeout(() => setToastMsg(''), 4000);
     }
@@ -400,6 +328,35 @@ const UploadReport = () => {
     { label: 'Last 30 days', value: 'month' },
     { label: 'Custom Date Range', value: 'custom' }
   ];
+
+  // ─── PDF Blob Handling ───────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchBlob = async () => {
+      if (viewReport && viewReport.type === 'pdf' && viewReport.fileData) {
+        try {
+          const response = await fetch(viewReport.fileData);
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          setBlobUrl(url);
+        } catch (err) {
+          console.error("Blob fetch failed:", err);
+          // Fallback to original URL if blob fetch fails
+          setBlobUrl(viewReport.fileData);
+        }
+      } else if (viewReport && viewReport.type === 'image') {
+        setBlobUrl(viewReport.fileData);
+      }
+    };
+
+    fetchBlob();
+
+    return () => {
+      if (blobUrl && blobUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(blobUrl);
+      }
+      setBlobUrl(null);
+    };
+  }, [viewReport]);
 
   // ─── JSX ─────────────────────────────────────────────────────────────────
   return (
@@ -797,13 +754,25 @@ const UploadReport = () => {
                   className="max-w-full max-h-full object-contain"
                 />
               ) : (
-                <iframe
-                  src={viewReport.fileData}
-                  title={viewReport.name}
-                  className="w-full h-full border-none rounded-xl"
-                />
+                <div className="w-full h-full flex flex-col items-center justify-center p-0 overflow-hidden">
+                  <iframe
+                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(viewReport.fileData)}&embedded=true`}
+                    className="w-full h-full border-none rounded-xl"
+                    title="Report Viewer"
+                  />
+                  <div className="mt-4 pb-4 px-4 text-center md:hidden">
+                    <a
+                      href={viewReport.fileData}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-600 font-bold underline text-sm"
+                    >
+                      Having trouble? Open Direct Link
+                    </a>
+                  </div>
+                </div>
               )}
-            </div>
+              bitumen            </div>
           </div>
 
           {/* Mobile Actions */}

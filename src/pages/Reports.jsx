@@ -19,6 +19,7 @@ const Reports = () => {
   const [viewModal, setViewModal] = useState(false);
   const [analysisModal, setAnalysisModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [blobUrl, setBlobUrl] = useState(null);
 
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,9 +70,14 @@ const Reports = () => {
   };
 
   const handleDownload = async (report) => {
+    if (!report.fileData) return;
     setToastMsg(`Preparing download...`);
+    
+    // We try the blob approach first (for custom filename)
+    // If it fails (CORS), we fallback to direct window open
     try {
-      const response = await fetch(report.fileData);
+      const response = await fetch(report.fileData, { mode: 'cors' });
+      if (!response.ok) throw new Error('CORS or Network error');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -81,15 +87,44 @@ const Reports = () => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-
       setToastMsg(`Successfully downloaded ${report.name.substring(0, 15)}${report.name.length > 15 ? '...' : ''}`);
     } catch (error) {
-      console.error("Error downloading file", error);
-      setToastMsg('Error: Failed to fetch the target file content.');
+      console.warn("Direct download failed, falling back to new tab access:", error);
+      // Fallback: Just open the URL directly (browser will handle display/download)
+      window.open(report.fileData, '_blank');
+      setToastMsg('Opening report in new tab for download...');
     } finally {
       setTimeout(() => setToastMsg(''), 4000);
     }
   };
+
+  // ─── PDF Blob Handling ───────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchBlob = async () => {
+      if (selectedReport && (selectedReport.type === 'pdf' || selectedReport.fileData.toLowerCase().endsWith('.pdf'))) {
+        try {
+          const response = await fetch(selectedReport.fileData);
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          setBlobUrl(url);
+        } catch (err) {
+          console.error("Blob fetch failed in Reports:", err);
+          setBlobUrl(selectedReport.fileData);
+        }
+      } else if (selectedReport && selectedReport.fileData) {
+        setBlobUrl(selectedReport.fileData);
+      }
+    };
+
+    fetchBlob();
+
+    return () => {
+      if (blobUrl && blobUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(blobUrl);
+      }
+      setBlobUrl(null);
+    };
+  }, [selectedReport]);
 
   // ─── Auth listener ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -104,18 +139,23 @@ const Reports = () => {
     setIsLoading(true);
     try {
       const q = query(
-        collection(db, 'users', user.uid, 'reports'),
-        orderBy('createdAt', 'desc')
+        collection(db, 'users', user.uid, 'reports')
       );
       const snapshot = await getDocs(q);
-      const fetchedReports = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const allFetched = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // Sort client-side to ensure no documents are silently excluded
+      const fetchedReports = allFetched.sort((a, b) => {
+        const da = a.createdAt?.toDate() || new Date(a.date || 0);
+        const db = b.createdAt?.toDate() || new Date(b.date || 0);
+        return db - da; // Descending (newest first)
+      });
       setReports(fetchedReports);
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
       setIsLoading(false);
     }
-    console.log("kkkkk")
   }, []);
 
   useEffect(() => {
@@ -602,18 +642,38 @@ const Reports = () => {
             <div className="flex-1 bg-gray-50 overflow-auto p-4 md:p-8">
               <div className="max-w-5xl mx-auto h-full bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center p-2 md:p-4">
                 {selectedReport.fileData ? (
-                  selectedReport.type === 'image' ? (
+                  selectedReport.type === 'image' && !selectedReport.fileData.toLowerCase().endsWith('.pdf') ? (
                     <img
                       src={selectedReport.fileData}
                       alt={selectedReport.name}
                       className="max-w-full max-h-full object-contain"
                     />
                   ) : (
-                    <iframe
-                      src={selectedReport.fileData}
-                      title={selectedReport.name}
-                      className="w-full h-full border-none rounded-xl"
-                    />
+                    <div className="w-full h-full flex flex-col items-center justify-center p-0 overflow-hidden">
+                      {blobUrl ? (
+                        <iframe
+                          src={blobUrl}
+                          className="w-full h-full border-none rounded-xl"
+                          title="Report Viewer"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-12 h-12 border-4 border-[#263B6A] border-t-transparent rounded-full animate-spin"></div>
+                          <p className="text-gray-500 font-medium tracking-tight">Securing file for preview...</p>
+                        </div>
+                      )}
+                      {/* Fallback link overlay */}
+                      <div className="mt-4 pb-4 px-4 text-center">
+                        <a
+                          href={selectedReport.fileData}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#263B6A] font-bold underline text-sm hover:text-blue-800"
+                        >
+                          Having trouble? Open Original Link in New Tab
+                        </a>
+                      </div>
+                    </div>
                   )
                 ) : (
                   <div className="text-center p-12">
@@ -724,7 +784,7 @@ const Reports = () => {
                       <div className="mt-4 flex items-center gap-2">
                         <span className="text-sm font-medium text-gray-500">Risk Level:</span>
                         <span className={`px-3 py-1 rounded-full text-xs font-bold bg-white border shadow-sm ${selectedReport.risks >= 3 ? 'border-red-200 text-red-700' : selectedReport.risks >= 1 ? 'border-yellow-200 text-yellow-700' : 'border-green-200 text-green-700'}`}>
-                          {selectedReport.risks >= 3 ? 'High Risk' : selectedReport.risks >= 1 ? 'Moderate Risk' : 'Low Risk'}
+                          {selectedReport.risks >= 3 ? 'High Risk' : selectedReport.risks >= 1 ? 'Medium Risk' : 'Low Risk'}
                         </span>
                       </div>
                     </div>
