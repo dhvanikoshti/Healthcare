@@ -16,7 +16,7 @@ const getInitials = (name) => {
 };
 
 
-const Layout = ({ children }) => {
+const Layout = ({ children, title, headerActions }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -77,7 +77,7 @@ const Layout = ({ children }) => {
         }
 
         const userRef = doc(db, 'users', user.uid);
-        
+
         // Update lastActive once upon authentication
         updateDoc(userRef, { lastActive: serverTimestamp() }).catch(err => console.error("Error updating lastActive:", err));
 
@@ -364,7 +364,18 @@ const Layout = ({ children }) => {
       )}
 
       <main className={`pt-[60px] transition-all duration-300 ${mainMargin}`} style={{ backgroundColor: 'white' }}>
-        <div className="p-4 sm:p-6 lg:p-10" style={{ backgroundColor: 'white' }}>
+        {title && (
+          <div className="bg-slate-100/100 border-b border-slate-200/80 pt-10 pb-5 px-6 sm:px-8 lg:px-10 flex items-center justify-between transition-all">
+            <div className="flex items-center gap-4">
+              <div className="h-6 w-1 bg-blue-600 rounded-full shadow-sm shadow-blue-600/20"></div>
+              <h1 className="text-xl font-bold text-slate-800 tracking-tight leading-none">{title}</h1>
+            </div>
+            <div className="flex items-center gap-4">
+              {headerActions}
+            </div>
+          </div>
+        )}
+        <div className="p-4 sm:p-6 lg:p-6" style={{ backgroundColor: 'white' }}>
           {children}
         </div>
       </main>

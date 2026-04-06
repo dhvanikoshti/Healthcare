@@ -230,36 +230,23 @@ const HealthTipDetail = () => {
 
   if (!tip) {
     return (
-      <Layout>
-        {/* Attractive Header for Not Found */}
-        <div className="mb-8">
-          <div className="rounded-2xl p-8 shadow-lg" style={{ backgroundColor: '#263B6A' }}>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <h1 className="text-4xl font-bold text-white mb-3">Health Tip Detail</h1>
-                <p className="text-cyan-100 text-lg">Article not found</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Not Found Card */}
-        <div className="premium-card p-12 text-center">
-          <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-            <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <Layout title="Article Not Found">
+        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-8 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200 mt-8">
+          <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-md mb-6 border border-slate-100">
+            <svg className="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h3 className="text-2xl font-bold text-gray-800 mb-3">Article Not Found</h3>
-          <p className="text-gray-500 mb-8 text-lg">The health tip you're looking for doesn't exist or has been removed.</p>
+          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight mb-2">Article Not Found</h2>
+          <p className="text-slate-500 mb-8 max-w-sm">We couldn't find the health tip you were looking for. It may have been moved or removed.</p>
           <button
             onClick={() => navigate('/health-tips')}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-600 text-white rounded-xl font-medium hover:bg-cyan-700 transition-colors"
+            className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Health Tips
+            Explore Health Tips
           </button>
         </div>
       </Layout>
@@ -267,29 +254,22 @@ const HealthTipDetail = () => {
   }
 
   return (
-    <Layout>
+    <Layout
+      title="Article Details"
+      headerActions={
+        <button
+          onClick={() => navigate('/health-tips')}
+          className="px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-700 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-white hover:border-slate-300 transition-all flex items-center gap-2 shadow-sm"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to List
+        </button>
+      }
+    >
       <div className="bg-white rounded-2xl p-6 md:p-8 shadow-xl border border-gray-100 min-h-screen mb-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 pb-6 border-b border-gray-100">
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex w-14 h-14 bg-[#263B6A] rounded-2xl items-center justify-center shadow-lg shadow-blue-900/20 shrink-0">
-              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </div>
-            <div>
-              <h2 className="text-2xl md:text-3xl font-black text-[#263B6A] pb-1">
-                Health Tip Details
-              </h2>
-              <p className="text-gray-500 text-sm font-medium mt-1">
-                Read and learn from expert health advice.
-              </p>
-            </div>
-          </div>
-          <button onClick={() => navigate('/health-tips')} className="px-5 py-2.5 bg-white border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-white hover:border-gray-300 transition-all flex items-center justify-center gap-2 shadow-sm w-full md:w-auto shrink-0">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to List
-          </button>
-        </div>
+
 
         <div className="space-y-8" id="print-content">
           {/* Hero Image with Gradient Overlay */}

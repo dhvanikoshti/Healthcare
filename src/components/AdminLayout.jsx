@@ -5,7 +5,7 @@ import { doc, getDoc, onSnapshot, collection, query, where, getDocs, deleteDoc, 
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { db } from '../firebase';
 
-const AdminLayout = ({ children }) => {
+const AdminLayout = ({ children, title, subtitle, headerActions }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -234,6 +234,22 @@ const AdminLayout = ({ children }) => {
       {sidebarOpen && <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setSidebarOpen(false)}></div>}
 
       <main className={`pt-[60px] transition-all duration-300 ${mainMargin}`} style={{ backgroundColor: 'white' }}>
+        {title && (
+          <div className="bg-slate-100/100 border-b border-slate-200/80 pt-10 pb-5 px-6 sm:px-8 lg:px-10 flex flex-col md:flex-row justify-between md:items-center gap-4 transition-all">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-1.5 bg-[#263B6A] rounded-full shadow-sm"></div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-800 tracking-tight leading-none">{title}</h1>
+                {subtitle && <p className="text-slate-500 text-sm font-medium mt-1.5">{subtitle}</p>}
+              </div>
+            </div>
+            {headerActions && (
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                {headerActions}
+              </div>
+            )}
+          </div>
+        )}
         <div className="p-4 sm:p-6 lg:p-6 xl:p-10" style={{ backgroundColor: 'white' }}>{children}</div>
       </main>
 

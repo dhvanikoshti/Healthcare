@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, ReferenceLine } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, ReferenceLine, ComposedChart, ReferenceArea, LabelList, Bar, BarChart, Cell } from 'recharts';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase';
@@ -12,9 +12,9 @@ const TrendAnalysis = () => {
   const [selectedReports, setSelectedReports] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedTestName, setSelectedTestName] = useState('');
   const [viewMode, setViewMode] = useState('single'); // 'single' or 'trends'
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedTrajectoryParam, setSelectedTrajectoryParam] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -57,8 +57,9 @@ const TrendAnalysis = () => {
 
           return {
             id: docSnap.id,
-            reportName: data.name,
-            reportDate: data.date,
+            reportName: data.name || data.analysis?.report_name || 'Lab Report',
+            reportDate: data.analysis?.report_date || data.analysis?.reportDate || data.report_date || data.reportDate || data.analysis?.date || data.date,
+            category: (data.category || data.analysis?.report_category || data.analysis?.report_type || data.analysis?.category || data.analysis?.type || 'Blood Test').toString().trim(),
             medicalData: labReport,
             hasAnalysis: true,
             status: status === 'Pending' ? 'Analyzed' : status,
@@ -73,8 +74,9 @@ const TrendAnalysis = () => {
 
         return {
           id: docSnap.id,
-          reportName: data.name,
-          reportDate: data.date,
+          reportName: data.name || 'Lab Report',
+          reportDate: data.report_date || data.date,
+          category: (data.category || 'Uncategorized').toString().trim(),
           medicalData: [],
           hasAnalysis: false,
           status: status,
@@ -127,15 +129,7 @@ const TrendAnalysis = () => {
     return { bg: '#f3f4f6', text: '#6b7280', label: status || 'Unknown', icon: '?' };
   };
 
-  const allTestNames = [...new Set(
-    extractedMedicalData.flatMap(r => (r.medicalData || []).map(t => t.testName))
-  )];
 
-  useEffect(() => {
-    if (allTestNames.length > 0 && !selectedTestName) {
-      setSelectedTestName(allTestNames[0]);
-    }
-  }, [extractedMedicalData.length, allTestNames]);
 
   const latestReport = selectedReports[selectedReports.length - 1];
 
@@ -157,10 +151,17 @@ const TrendAnalysis = () => {
   }, [selectedReports.length]);
 
   const toggleReportSelection = (report) => {
+    // In single/analysis mode → replace selection; in fluctuations mode → multi-select
+    if (viewMode === 'single') {
+      setSelectedReports([report]);
+      setIsDropdownOpen(false);
+      return;
+    }
+
     setSelectedReports(prev => {
       const isSelected = prev.some(r => r.id === report.id);
       if (isSelected) {
-        if (prev.length === 1) return prev; // Keep at least one selected
+        if (prev.length === 1) return prev; // always keep at least one
         return prev.filter(r => r.id !== report.id);
       } else {
         return [...prev, report].sort((a, b) => {
@@ -172,13 +173,7 @@ const TrendAnalysis = () => {
     });
   };
 
-  const chartLineData = selectedTestName ? extractedMedicalData
-    .filter(report => selectedReports.some(sr => sr.id === report.id)) // Filter by selection
-    .filter(report => report.medicalData?.some(t => t.testName === selectedTestName))
-    .map(report => {
-      const test = report.medicalData.find(t => t.testName === selectedTestName);
-      return { name: report.reportDate, value: parseFloat(test.testValue) };
-    }) : [];
+
 
   const renderSingleReportView = () => {
     const activeReport = selectedReports[0];
@@ -186,41 +181,53 @@ const TrendAnalysis = () => {
     return (
       <div className="space-y-8 animate-in fade-in duration-500">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow">
-            <div>
-              <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center mb-4 border border-slate-100">
-                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+          <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] py-4 px-6 shadow-xl shadow-slate-900/5 border border-slate-100 flex flex-col justify-between hover:scale-[1.02] hover:shadow-cyan-500/5 transition-all duration-500 border-b-4 border-b-cyan-500 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 bg-cyan-100/50 rounded-xl flex items-center justify-center border border-cyan-200/50 shadow-inner group-hover:rotate-12 transition-transform">
+                  <svg className="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                </div>
+                <p className="text-[10px] font-black text-cyan-700/60 uppercase tracking-[0.2em]">Total Tests</p>
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Tests</p>
             </div>
-            <p className="text-4xl font-black text-slate-800 mt-2">{activeReport.medicalData?.length || 0}</p>
+            <p className="text-3xl font-black text-slate-800 relative z-10 tracking-tighter group-hover:translate-x-1 transition-transform">{activeReport.medicalData?.length || 0}</p>
           </div>
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow border-b-4 border-b-emerald-400">
-            <div>
-              <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center mb-4 border border-emerald-100">
-                <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] py-4 px-6 shadow-xl shadow-slate-900/5 border border-slate-100 flex flex-col justify-between hover:scale-[1.02] hover:shadow-emerald-500/5 transition-all duration-500 border-b-4 border-b-emerald-500 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 bg-emerald-100/50 rounded-xl flex items-center justify-center border border-emerald-200/50 shadow-inner group-hover:rotate-12 transition-transform">
+                  <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <p className="text-[10px] font-black text-emerald-700/60 uppercase tracking-[0.2em]">Low Risk</p>
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Low Risk</p>
             </div>
-            <p className="text-4xl font-black text-emerald-600 mt-2">{activeReport.medicalData?.filter(t => (t.status || '').toLowerCase() === 'normal').length || 0}</p>
+            <p className="text-3xl font-black text-emerald-600 relative z-10 tracking-tighter group-hover:translate-x-1 transition-transform">{activeReport.medicalData?.filter(t => (t.status || '').toLowerCase() === 'normal' || (t.status || '').toLowerCase() === 'optimal').length || 0}</p>
           </div>
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow border-b-4 border-b-amber-400">
-            <div>
-              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center mb-4 border border-amber-100">
-                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] py-4 px-6 shadow-xl shadow-slate-900/5 border border-slate-100 flex flex-col justify-between hover:scale-[1.02] hover:shadow-amber-500/5 transition-all duration-500 border-b-4 border-b-amber-500 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 bg-amber-100/50 rounded-xl flex items-center justify-center border border-amber-200/50 shadow-inner group-hover:rotate-12 transition-transform">
+                  <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                </div>
+                <p className="text-[10px] font-black text-amber-700/60 uppercase tracking-[0.2em]">Medium Risk</p>
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medium Risk</p>
             </div>
-            <p className="text-4xl font-black text-amber-600 mt-2">{activeReport.medicalData?.filter(t => (t.status || '').toLowerCase() === 'borderline' || (t.status || '').toLowerCase() === 'warning').length || 0}</p>
+            <p className="text-3xl font-black text-amber-600 relative z-10 tracking-tighter group-hover:translate-x-1 transition-transform">{activeReport.medicalData?.filter(t => ['borderline', 'low', 'high', 'warning'].includes((t.status || '').toLowerCase())).length || 0}</p>
           </div>
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow border-b-4 border-b-red-400">
-            <div>
-              <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center mb-4 border border-red-100">
-                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] py-4 px-6 shadow-xl shadow-slate-900/5 border border-slate-100 flex flex-col justify-between hover:scale-[1.02] hover:shadow-red-500/5 transition-all duration-500 border-b-4 border-b-red-500 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 bg-red-100/50 rounded-xl flex items-center justify-center border border-red-200/50 shadow-inner group-hover:rotate-12 transition-transform">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <p className="text-[10px] font-black text-red-700/60 uppercase tracking-[0.2em]">High Risk</p>
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">High Risk</p>
             </div>
-            <p className="text-4xl font-black text-red-600 mt-2">{activeReport.medicalData?.filter(t => (t.status || '').toLowerCase() === 'abnormal' || (t.status || '').toLowerCase() === 'critical' || (t.status || '').toLowerCase() === 'dangerous').length || 0}</p>
+            <p className="text-3xl font-black text-red-600 relative z-10 tracking-tighter group-hover:translate-x-1 transition-transform">{activeReport.medicalData?.filter(t => ['abnormal', 'critical', 'dangerous'].includes((t.status || '').toLowerCase())).length || 0}</p>
           </div>
         </div>
 
@@ -316,220 +323,168 @@ const TrendAnalysis = () => {
   };
 
   const renderTrendsView = () => {
-    const parseRange = (refStr) => {
-      if (!refStr) return null;
-      const clean = refStr.replace(/[^0-9.\-<>]/g, ' ').trim();
-      if (clean.includes('-')) {
-        const [min, max] = clean.split('-').map(v => parseFloat(v));
-        return { min, max };
-      }
-      if (clean.startsWith('<')) return { min: 0, max: parseFloat(clean.slice(1)) };
-      if (clean.startsWith('>')) {
-        const min = parseFloat(clean.slice(1));
-        return { min, max: min * 2 };
-      }
-      return null;
-    };
-
-    const getFluctuation = (p) => {
-      const val = parseFloat(p.testValue);
-      const ref = parseRange(p.referenceRange);
-      if (!isNaN(val) && ref) {
-        if (val > ref.max) return Math.min(((val - ref.max) / ref.max) * 100, 100);
-        else if (val < ref.min) return Math.max(((val - ref.min) / (ref.min || 1)) * 100, -100);
-      }
-      return p.status === 'Abnormal' ? 50 : p.status === 'Normal' ? 0 : 25;
-    };
-
-    let fluctuationData = [];
-    const isComparison = selectedReports.length > 1;
-
-    if (!isComparison) {
-      // Logic for 1 report: Show ALL parameters
-      fluctuationData = (latestReport?.medicalData || []).map(p => ({
-        name: (p.testName || 'Test').substring(0, 12),
-        fullName: p.testName || 'Test',
-        value: getFluctuation(p),
-        originalValue: p.testValue,
-        unit: p.units || '',
-        status: p.status,
-        refRange: p.referenceRange || 'N/A'
-      }));
-    } else {
-      // Logic for 2+ reports: Show COMPARISON
-      const r1 = selectedReports[selectedReports.length - 2]; // Previous
-      const r2 = selectedReports[selectedReports.length - 1]; // Latest
-
-      // Get all unique parameters from both reports
-      const allParams = [...new Set([
-        ...(r1.medicalData || []).map(t => t.testName),
-        ...(r2.medicalData || []).map(t => t.testName)
-      ])];
-
-      fluctuationData = allParams.map(name => {
-        const p1 = r1.medicalData.find(t => t.testName === name);
-        const p2 = r2.medicalData.find(t => t.testName === name);
-
-        return {
-          name: name.substring(0, 12),
-          fullName: name,
-          val1: p1 ? getFluctuation(p1) : null,
-          val2: p2 ? getFluctuation(p2) : null,
-          report1: p1 ? { val: p1.testValue, unit: p1.units } : null,
-          report2: p2 ? { val: p2.testValue, unit: p2.units } : null,
-          ref1: p1?.referenceRange || 'N/A',
-          ref2: p2?.referenceRange || 'N/A'
-        };
-      }).filter(d => d.val1 !== null || d.val2 !== null).slice(0, 20);
+    // ── 0. Require at least 1 selected report ────────────────────────────────
+    if (selectedReports.length < 1) {
+      return (
+        <div className="bg-slate-50 rounded-[3rem] p-4 lg:p-6 border border-slate-100/50 shadow-inner">
+          <div className="bg-white rounded-[2.5rem] p-12 text-center shadow-xl border border-slate-100 transition-all">
+            <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-blue-100/50">
+              <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            </div>
+            <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight mb-3">Select a Report</h2>
+            <p className="text-slate-500 max-w-sm mx-auto font-medium text-sm leading-relaxed">
+              Please select at least <strong>one report</strong> from the dataset selector above to view health fluctuations.
+            </p>
+          </div>
+        </div>
+      );
     }
 
-    const isImproving = selectedReports.length > 1 && (
-      (selectedReports[selectedReports.length - 1].totalAbnormals <= selectedReports[0].totalAbnormals)
-    );
+    // ── Single-report parameter profile (bar chart) ──────────────────────────
+    if (selectedReports.length === 1) {
+      const report = selectedReports[0];
+      const tests = (report.medicalData || []).filter(m => {
+        const val = parseFloat(m.testValue);
+        return !isNaN(val) && (m.testName || '').trim() !== '';
+      });
 
-    return (
-      <div className="space-y-12 animate-in slide-in-from-bottom duration-700">
-        {selectedReports.length > 1 && (
-          <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="flex items-center gap-6">
-              <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg text-white ${isImproving ? 'bg-emerald-500' : 'bg-amber-500'}`}>
-                {isImproving ? (
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                ) : (
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
-                )}
+      if (tests.length === 0) {
+        return (
+          <div className="bg-slate-50 rounded-[3rem] p-4 lg:p-6 border border-slate-100/50 shadow-inner">
+            <div className="bg-white rounded-[2.5rem] p-12 text-center shadow-xl border border-slate-100 transition-all">
+              <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
               </div>
-              <div>
-                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Comparative Analysis</h3>
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Latest vs. Baseline Progress</p>
-              </div>
+              <p className="text-slate-500 font-bold text-sm">No numeric test data found in this report</p>
             </div>
-            <div className="flex gap-4">
-              <div className="px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Warnings</p>
-                <p className="text-2xl font-black text-slate-800">{latestReport.totalAbnormals}</p>
-              </div>
-              <div className="px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Difference</p>
-                <p className={`text-2xl font-black ${isImproving ? 'text-emerald-500' : 'text-red-500'}`}>
-                  {latestReport.totalAbnormals - selectedReports[0].totalAbnormals > 0 ? '+' : ''}{latestReport.totalAbnormals - selectedReports[0].totalAbnormals}
-                </p>
+          </div>
+        );
+      }
+
+      const barData = tests.map(m => {
+        const val = parseFloat(m.testValue);
+        const refStr = m.referenceRange || '';
+        const hasDash = typeof refStr === 'string' && refStr.includes('-');
+        const refParts = hasDash ? refStr.split('-') : [];
+        const refMin = refParts.length >= 2 ? parseFloat(refParts[0]) : null;
+        const refMax = refParts.length >= 2 ? parseFloat(refParts[1]) : null;
+        const isHigh = refMax !== null && val > refMax;
+        const isLow = refMin !== null && val < refMin;
+        return {
+          name: m.testName,
+          value: val,
+          unit: m.units || '',
+          refMin,
+          refMax,
+          refRaw: refStr || 'N/A',
+          status: isHigh ? 'High' : isLow ? 'Low' : 'Normal',
+          color: isHigh ? '#dc2626' : isLow ? '#d97706' : '#2563eb',
+        };
+      });
+
+      const normalCount = barData.filter(d => d.status === 'Normal').length;
+      const highCount = barData.filter(d => d.status === 'High').length;
+      const lowCount = barData.filter(d => d.status === 'Low').length;
+
+      return (
+        <div className="space-y-8 animate-in slide-in-from-bottom duration-500">
+          {/* Summary chips */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Report</p>
+              <p className="text-sm font-black text-slate-800 truncate" title={report.reportName}>{report.reportName}</p>
+            </div>
+            <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Date</p>
+              <p className="text-sm font-black text-slate-700">{report.reportDate || '—'}</p>
+            </div>
+            <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Parameters</p>
+              <p className="text-3xl font-black text-blue-600">{tests.length}</p>
+            </div>
+            <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</p>
+              <div className="flex items-center gap-2 mt-1">
+                {normalCount > 0 && <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{normalCount} Normal</span>}
+                {highCount > 0 && <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-full">{highCount} High</span>}
+                {lowCount > 0 && <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{lowCount} Low</span>}
               </div>
             </div>
           </div>
-        )}
 
-        {fluctuationData.length > 0 ? (
-          <div className="bg-slate-50 rounded-[3rem] p-6 lg:p-10 border border-slate-100/50 shadow-inner">
-            <div className="bg-white rounded-[2.5rem] p-8 lg:p-12 shadow-2xl border border-slate-100 transition-all">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
+          {/* Bar chart card */}
+          <div className="bg-slate-50 rounded-[3rem] p-4 lg:p-6 border border-slate-100/50 shadow-inner">
+            <div className="bg-white rounded-[2.5rem] p-6 lg:p-8 shadow-2xl border border-slate-100">
+              {/* Header */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center shadow-lg text-white">
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+                  <div className="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center shadow-lg text-white shrink-0">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight leading-tight">Health Fluctuation Profile</h2>
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight leading-tight">Parameter Profile</h2>
                     <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">
-                      {isComparison ? `Comparison: ${selectedReports[selectedReports.length - 2].reportDate} vs ${selectedReports[selectedReports.length - 1].reportDate}` : `All Parameters (Latest: ${latestReport?.reportDate})`}
+                      {report.reportName} · {report.reportDate || '—'} · <span className="text-blue-600">{tests.length} Parameters</span>
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-6 p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
-                  {isComparison ? (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-slate-200"></div>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Baseline</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-cyan-500"></div>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Latest</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-6 rounded-full bg-red-400"></div>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">High Risk</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-6 rounded-full bg-slate-200"></div>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Low Risk</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-6 rounded-full bg-blue-400"></div>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Medium Risk</span>
-                      </div>
-                    </>
-                  )}
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-6 mb-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm bg-blue-600"></div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Normal</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm bg-red-600"></div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">High</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm bg-amber-500"></div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Low</span>
                 </div>
               </div>
 
-              <div className="h-[350px] w-full">
+              {/* Bar Chart */}
+              <div style={{ height: Math.max(320, barData.length * 40) }} className="w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={fluctuationData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
-                    <defs>
-                      <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
-                        <stop offset="50%" stopColor="#ef4444" stopOpacity={0} />
-                        <stop offset="50%" stopColor="#3b82f6" stopOpacity={0} />
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.4} />
-                      </linearGradient>
-                      <linearGradient id="colorComparison" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 9, fontBold: '900' }} dy={10} />
-                    <YAxis domain={[-100, 100]} hide />
+                  <BarChart data={barData} layout="vertical" margin={{ top: 10, right: 50, left: 10, bottom: 10 }}>
+                    <CartesianGrid strokeDasharray="5 5" horizontal={false} stroke="#e2e8f0" />
+                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '700' }} />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#334155', fontSize: 10, fontWeight: '700' }}
+                      width={120}
+                    />
                     <Tooltip
-                      cursor={{ stroke: '#cbd5e1', strokeWidth: 2 }}
+                      cursor={{ fill: 'rgba(0,0,0,0.03)' }}
                       content={({ active, payload }) => {
                         if (active && payload && payload.length) {
-                          const data = payload[0].payload;
-                          if (isComparison) {
-                            return (
-                              <div className="bg-slate-900 border-none rounded-2xl p-6 shadow-2xl ring-1 ring-white/10 max-w-xs">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{data.fullName}</p>
-                                <div className="space-y-4">
-                                  <div className="flex items-center justify-between gap-8">
-                                    <div>
-                                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Baseline</p>
-                                      <p className="text-xl font-black text-white">{data.report1?.val || '—'} <span className="text-[10px] text-slate-400">{data.report1?.unit}</span></p>
-                                    </div>
-                                    <span className="text-[10px] font-black text-slate-400">{data.val1 !== null ? `${Math.round(data.val1)}%` : '—'}</span>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-8">
-                                    <div>
-                                      <p className="text-[8px] font-black text-cyan-500 uppercase tracking-widest mb-1">Latest</p>
-                                      <p className="text-xl font-black text-white">{data.report2?.val || '—'} <span className="text-[10px] text-slate-400">{data.report2?.unit}</span></p>
-                                    </div>
-                                    <span className="text-[10px] font-black text-cyan-500">{data.val2 !== null ? `${Math.round(data.val2)}%` : '—'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          }
-                          const isHigh = data.value > 0;
+                          const d = payload[0].payload;
                           return (
-                            <div className="bg-slate-900 border-none rounded-2xl p-6 shadow-2xl ring-1 ring-white/10">
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{data.fullName}</p>
-                              <div className="flex items-baseline gap-2 mb-4">
-                                <span className="text-3xl font-black text-white">{data.originalValue}</span>
-                                <span className="text-xs font-bold text-slate-400 leading-none">{data.unit}</span>
+                            <div className="bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-5 shadow-2xl ring-1 ring-black/5 min-w-[160px]">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{d.name}</p>
+                              <div className="flex items-baseline gap-2 mb-3">
+                                <span className="text-3xl font-black text-slate-900">{d.value}</span>
+                                <span className="text-xs font-bold text-slate-500">{d.unit}</span>
                               </div>
-                              <div className="pt-4 border-t border-white/5 space-y-3">
+                              <div className="pt-3 border-t border-slate-100 space-y-2">
                                 <div className="flex items-center justify-between gap-6">
-                                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Fluctuation:</span>
-                                  <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${isHigh ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'}`}>
-                                    {isHigh ? '↑' : '↓'} {Math.abs(Math.round(data.value))}%
+                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status:</span>
+                                  <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${d.status === 'High' ? 'bg-red-500/10 text-red-600' : d.status === 'Low' ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600'}`}>
+                                    {d.status === 'High' ? '▲ High' : d.status === 'Low' ? '▼ Low' : '✓ Normal'}
                                   </span>
                                 </div>
-                                <div className="flex items-center justify-between gap-6">
-                                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Ref Range:</span>
-                                  <span className="text-[10px] font-black text-white">{data.refRange}</span>
-                                </div>
+                                {d.refRaw && d.refRaw !== 'N/A' && (
+                                  <div className="flex items-center justify-between gap-6">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reference:</span>
+                                    <span className="text-[10px] font-black text-slate-700">{d.refRaw}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
@@ -537,86 +492,365 @@ const TrendAnalysis = () => {
                         return null;
                       }}
                     />
-                    <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" label={{ position: 'top', value: 'NORMAL', fill: '#94a3b8', fontSize: 8, fontBold: '900' }} />
-                    {isComparison ? (
-                      <>
-                        <Area type="monotone" dataKey="val1" stroke="#cbd5e1" strokeWidth={2} fillOpacity={0.1} fill="#cbd5e1" dot={{ r: 4, fill: '#cbd5e1', strokeWidth: 0 }} />
-                        <Area type="monotone" dataKey="val2" stroke="#06b6d4" strokeWidth={4} fillOpacity={1} fill="url(#colorComparison)" dot={{ r: 6, fill: '#06b6d4', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8, fill: '#06b6d4', strokeWidth: 0 }} />
-                      </>
-                    ) : (
-                      <Area type="monotone" dataKey="value" stroke="#1e293b" strokeWidth={4} fillOpacity={1} fill="url(#colorValue)" dot={{ r: 6, fill: '#1e293b', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 10, fill: '#1e293b', strokeWidth: 0 }} />
-                    )}
-                  </AreaChart>
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={20}>
+                      {barData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                      <LabelList
+                        dataKey="value"
+                        position="right"
+                        offset={8}
+                        style={{ fill: '#1e293b', fontSize: 11, fontWeight: '900' }}
+                      />
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-slate-50 rounded-[3rem] p-16 text-center border border-slate-100 shadow-inner">
-            <div className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
-              <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </div>
-            <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight mb-2">Stability Detected</h2>
-            <p className="text-slate-400 max-w-md mx-auto">All medical parameters are within optimal ranges for the selected report.</p>
-          </div>
-        )}
 
-        {allTestNames.length > 0 && (
-          <div className="bg-white rounded-[2.5rem] p-8 lg:p-12 shadow-xl border border-slate-100 group transition-all">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-12">
-              <div>
-                <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight leading-tight">{selectedTestName} History</h2>
-                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Longitudinal parameter tracking</p>
+              {/* Parameter details table */}
+              <div className="mt-6 pt-4 border-t border-slate-100">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Parameter Details</p>
+                <div className="flex flex-wrap gap-2">
+                  {barData.map((d, idx) => {
+                    const chipColor = d.status === 'High'
+                      ? 'bg-red-50 text-red-700 border-red-200'
+                      : d.status === 'Low'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                    return (
+                      <div key={idx} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wide ${chipColor}`}>
+                        <span>{d.name}</span>
+                        <span className="opacity-60">·</span>
+                        <span>{d.value} {d.unit}</span>
+                        {d.refRaw !== 'N/A' && <span className="opacity-50">({d.refRaw})</span>}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── 2. Build unique parameter list (case-insensitive dedup) ────────────────
+    // Map lowercase → canonical display name, gathered across all selected reports
+    const nameMap = {};
+    selectedReports.forEach(r => {
+      (r.medicalData || []).forEach(m => {
+        const key = (m.testName || '').toLowerCase().trim();
+        if (key && !nameMap[key]) nameMap[key] = m.testName;
+      });
+    });
+
+    // A param is "available" if it exists in at least 2 of the selected reports
+    const allParams = Object.entries(nameMap)
+      .filter(([key]) =>
+        selectedReports.filter(r =>
+          r.medicalData.some(m => (m.testName || '').toLowerCase().trim() === key)
+        ).length >= 2
+      )
+      .map(([, displayName]) => displayName);
+
+    // Auto-select first available param if current param is missing/invalid
+    const activeParam =
+      allParams.find(p => p.toLowerCase().trim() === (selectedTrajectoryParam || '').toLowerCase().trim())
+      || allParams[0]
+      || null;
+
+    // Sync state without causing infinite loop
+    if (activeParam && activeParam !== selectedTrajectoryParam) {
+      setSelectedTrajectoryParam(activeParam);
+    }
+
+    // ── 3. Build chart data — one entry PER selected report ───────────────────
+    // Each report becomes one point on the X-axis, ordered by date (already sorted)
+    const chartData = selectedReports.map((report, idx) => {
+      const match = (report.medicalData || []).find(
+        m => (m.testName || '').toLowerCase().trim() === (activeParam || '').toLowerCase().trim()
+      );
+      const raw = match ? parseFloat(match.testValue) : null;
+      const refStr = match?.referenceRange || '';
+      const hasDash = typeof refStr === 'string' && refStr.includes('-');
+      const refParts = hasDash ? refStr.split('-') : [];
+      const refMin = refParts.length >= 2 ? parseFloat(refParts[0]) : null;
+      const refMax = refParts.length >= 2 ? parseFloat(refParts[1]) : null;
+
+      // X-axis label: use reportDate, fall back to report name/index
+      const xLabel = report.reportDate || report.reportName || `Report ${idx + 1}`;
+
+      return {
+        name: xLabel,
+        label: report.reportName ? `${report.reportName}\n${xLabel}` : xLabel,
+        date: xLabel,
+        reportName: report.reportName || `Report ${idx + 1}`,
+        value: !isNaN(raw) && raw !== null ? raw : null,
+        unit: match?.units || '',
+        status: match?.status || '—',
+        refRaw: refStr || 'N/A',
+        refMin,
+        refMax,
+      };
+    });
+
+    const validPoints = chartData.filter(d => d.value !== null).length;
+
+    // Reference band: use the first data point that has ref values
+    const refPoint = chartData.find(d => d.refMin !== null && d.refMax !== null);
+
+    // Colors for UI accents
+    const latestReport = selectedReports[selectedReports.length - 1];
+
+    return (
+      <div className="space-y-8 animate-in slide-in-from-bottom duration-500">
+        {/* ── Summary chips ──────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reports Selected</p>
+            <p className="text-3xl font-black text-slate-800">{selectedReports.length}</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Parameters</p>
+            <p className="text-3xl font-black text-blue-600">{allParams.length}</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Date Range</p>
+            <p className="text-sm font-black text-slate-700 leading-tight mt-1">
+              {selectedReports[0]?.reportDate || '—'}<br />
+              <span className="text-slate-400">to</span> {latestReport?.reportDate || '—'}
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data Points</p>
+            <p className="text-3xl font-black text-emerald-600">{validPoints}</p>
+          </div>
+        </div>
+
+        {/* ── Main chart card ───────────────────────────────────────────── */}
+        <div className="bg-slate-50 rounded-[3rem] p-4 lg:p-6 border border-slate-100/50 shadow-inner">
+          <div className="bg-white rounded-[2.5rem] p-6 lg:p-8 shadow-2xl border border-slate-100">
+
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-4">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Metric:</span>
-                <select
-                  value={selectedTestName}
-                  onChange={(e) => setSelectedTestName(e.target.value)}
-                  className="px-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-black text-slate-700 focus:outline-none focus:ring-4 focus:ring-cyan-500/10 shadow-sm transition-all"
-                >
-                  {allTestNames.map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
+                <div className="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center shadow-lg text-white shrink-0">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight leading-tight">Health Fluctuation Profile</h2>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">
+                    Tracking <span className="text-blue-600">{selectedReports.length}</span> reports · {selectedReports[0]?.reportDate} → {latestReport?.reportDate}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="h-[400px] w-full">
-              {chartLineData.length > 1 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartLineData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="10 10" stroke="#f1f5f9" vertical={false} />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontBold: '900' }} dy={15} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontBold: '900' }} domain={['auto', 'auto']} />
-                    <Tooltip
-                      cursor={{ stroke: '#f1f5f9', strokeWidth: 2 }}
-                      contentStyle={{ backgroundColor: '#1E293B', border: 'none', borderRadius: '24px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)' }}
-                      itemStyle={{ color: '#38bdf8', fontWeight: '900', fontSize: '24px' }}
-                      labelStyle={{ color: '#94a3b8', fontWeight: '900', fontSize: '12px', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '2px' }}
-                    />
-                    <Line type="monotone" dataKey="value" stroke="#0ea5e9" strokeWidth={6} dot={{ fill: '#0ea5e9', r: 8, strokeWidth: 4, stroke: '#fff' }} activeDot={{ r: 12, strokeWidth: 0, fill: '#1E293B' }} animationDuration={2000} />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100">
-                    <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                  </div>
-                  <p className="font-black text-slate-600 uppercase tracking-widest text-xs">Additional data required for trend visualization</p>
-                  <p className="text-slate-400 text-[10px] mt-1 font-bold">Please upload more reports containing this parameter</p>
+              {/* Active param badge */}
+              {activeParam && (
+                <div className="px-5 py-2.5 bg-blue-50 border-2 border-blue-200 rounded-2xl shadow-sm flex items-center gap-3 shrink-0">
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></div>
+                  <span className="text-[11px] font-black text-blue-800 uppercase tracking-widest leading-none">{activeParam}</span>
                 </div>
               )}
             </div>
+
+            {/* Param selector pills */}
+            {allParams.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mb-6 p-4 bg-slate-50/80 rounded-2xl border border-slate-100">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mr-1">Parameter:</span>
+                {allParams.map((param, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedTrajectoryParam(param)}
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeParam?.toLowerCase().trim() === param.toLowerCase().trim()
+                      ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
+                      : 'bg-white text-slate-400 border-slate-200 hover:border-slate-400 hover:text-slate-600'
+                      }`}
+                  >
+                    {param}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Legend */}
+            <div className="flex items-center gap-6 mb-6">
+              {refPoint && (
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-md bg-emerald-500/20 border border-emerald-500/50"></div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Normal Range</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{activeParam || 'Selected Trajectory'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{validPoints} / {selectedReports.length} data points</span>
+              </div>
+            </div>
+
+            {/* Chart */}
+            {validPoints > 0 ? (
+              <div className="h-[320px] w-full">
+                <ResponsiveContainer width="100%" height={320}>
+                  <ComposedChart data={chartData} margin={{ top: 40, right: 40, left: 0, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="5 5" vertical={false} stroke="#e2e8f0" />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b', fontSize: 10, fontWeight: '700' }}
+                      dy={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '700' }}
+                      domain={['auto', dataMax => Math.ceil(dataMax * 1.2)]}
+                    />
+                    <Tooltip
+                      cursor={{ stroke: '#2563eb', strokeWidth: 1, strokeDasharray: '4 4' }}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const d = payload[0].payload;
+                          const isHigh = d.refMax !== null && d.value > d.refMax;
+                          const isLow = d.refMin !== null && d.value < d.refMin;
+                          const isNormal = !isHigh && !isLow && d.value !== null;
+                          return (
+                            <div className="bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-5 shadow-2xl ring-1 ring-black/5 min-w-[160px]">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{d.reportName}</p>
+                              <p className="text-[9px] font-bold text-slate-300 mb-2">{d.date}</p>
+                              {d.value !== null ? (
+                                <>
+                                  <div className="flex items-baseline gap-2 mb-3">
+                                    <span className="text-3xl font-black text-slate-900">{d.value}</span>
+                                    <span className="text-xs font-bold text-slate-500">{d.unit}</span>
+                                  </div>
+                                  <div className="pt-3 border-t border-slate-100 space-y-2">
+                                    <div className="flex items-center justify-between gap-6">
+                                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status:</span>
+                                      <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${isHigh ? 'bg-red-500/10 text-red-600' : isLow ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600'}`}>
+                                        {isHigh ? '▲ High' : isLow ? '▼ Low' : '✓ Normal'}
+                                      </span>
+                                    </div>
+                                    {d.refRaw && d.refRaw !== 'N/A' && (
+                                      <div className="flex items-center justify-between gap-6">
+                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reference:</span>
+                                        <span className="text-[10px] font-black text-slate-700">{d.refRaw}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              ) : (
+                                <p className="text-[11px] font-bold text-slate-400 italic">No data in this report</p>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+
+                    {/* Normal range shading */}
+                    {refPoint && refPoint.refMin !== null && refPoint.refMax !== null && (
+                      <ReferenceArea
+                        y1={refPoint.refMin}
+                        y2={refPoint.refMax}
+                        fill="rgba(16, 185, 129, 0.06)"
+                        stroke="rgba(16, 185, 129, 0.15)"
+                        strokeDasharray="4 4"
+                      />
+                    )}
+
+                    {/* Single area line connecting all report dots */}
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#2563eb"
+                      strokeWidth={3}
+                      fillOpacity={0.08}
+                      fill="#2563eb"
+                      connectNulls={true}
+                      dot={(props) => {
+                        const { cx, cy, payload } = props;
+                        if (payload.value === null || isNaN(payload.value)) return null;
+                        const isHigh = payload.refMax !== null && payload.value > payload.refMax;
+                        const isLow = payload.refMin !== null && payload.value < payload.refMin;
+                        const color = isHigh ? '#dc2626' : isLow ? '#d97706' : '#2563eb';
+                        return (
+                          <g key={`dot-${cx}-${cy}`}>
+                            <circle cx={cx} cy={cy} r={7} fill={color} stroke="#fff" strokeWidth={3} />
+                          </g>
+                        );
+                      }}
+                      activeDot={{ r: 9, fill: '#1e3a8a', strokeWidth: 0 }}
+                    >
+                      <LabelList
+                        dataKey="value"
+                        position="top"
+                        offset={16}
+                        style={{ fill: '#1e293b', fontSize: 11, fontWeight: '900' }}
+                        formatter={(v) => v !== null && !isNaN(v) ? v : ''}
+                      />
+                    </Area>
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-[200px] flex flex-col items-center justify-center text-center">
+                <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                  <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                </div>
+                <p className="text-slate-500 font-bold text-sm">No numeric data found for <span className="text-slate-800">{activeParam}</span></p>
+                <p className="text-slate-400 text-xs mt-1">Try selecting a different parameter above</p>
+              </div>
+            )}
+
+            {/* Report timeline — shows each report as a labeled chip */}
+            <div className="mt-6 pt-4 border-t border-slate-100">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Selected Reports Timeline</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedReports.map((r, idx) => {
+                  const match = (r.medicalData || []).find(
+                    m => (m.testName || '').toLowerCase().trim() === (activeParam || '').toLowerCase().trim()
+                  );
+                  const val = match ? parseFloat(match.testValue) : null;
+                  const refStr = match?.referenceRange || '';
+                  const hasDash = refStr.includes('-');
+                  const refParts = hasDash ? refStr.split('-') : [];
+                  const refMin = refParts.length >= 2 ? parseFloat(refParts[0]) : null;
+                  const refMax = refParts.length >= 2 ? parseFloat(refParts[1]) : null;
+                  const isHigh = refMax !== null && val > refMax;
+                  const isLow = refMin !== null && val < refMin;
+                  const chipColor = val === null || isNaN(val)
+                    ? 'bg-slate-100 text-slate-400 border-slate-200'
+                    : isHigh
+                      ? 'bg-red-50 text-red-700 border-red-200'
+                      : isLow
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                  return (
+                    <div key={r.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wide ${chipColor}`}>
+                      <span className="text-[9px] font-bold opacity-60">#{idx + 1}</span>
+                      <span>{r.reportName}</span>
+                      <span className="opacity-60">·</span>
+                      <span>{r.reportDate}</span>
+                      {val !== null && !isNaN(val) && <span className="ml-1 font-black">{val} {match?.units || ''}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     );
   };
 
   if (isLoading) {
     return (
-      <Layout>
+      <Layout title="Trend Analysis">
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
           <div className="w-16 h-16 border-4 border-cyan-100 border-t-cyan-600 rounded-full animate-spin mb-4"></div>
           <p className="text-gray-500 font-medium">Loading your reports...</p>
@@ -627,19 +861,15 @@ const TrendAnalysis = () => {
 
   if (!hasReports) {
     return (
-      <Layout>
-        <div className="max-w-7xl mx-auto pb-24 space-y-8">
-          <div className="rounded-[3rem] p-12 text-white shadow-2xl relative overflow-hidden" style={{ backgroundColor: '#263B6A' }}>
-            <h1 className="text-5xl font-black uppercase tracking-tighter mb-4">Trend Analysis</h1>
-            <p className="text-cyan-200 text-lg font-bold opacity-80 uppercase tracking-widest">No reports detected in your profile</p>
-          </div>
+      <Layout title="Trend Analysis">
+        <div className="max-w-7xl mx-auto pb-24 space-y-8 mt-8">
           <div className="bg-slate-50 rounded-[3rem] p-24 text-center border border-slate-100 shadow-inner">
             <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl">
               <svg className="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
             </div>
             <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tight mb-4">Start Your Health Journey</h2>
             <p className="text-slate-400 max-w-lg mx-auto mb-10 font-medium">Upload your first medical report to unlock AI-powered insights, fluctuation profiles, and longitudinal trend analysis.</p>
-            <Link to="/upload-report" className="inline-flex items-center gap-4 px-12 py-5 bg-cyan-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-cyan-700 transition-all shadow-xl shadow-cyan-900/20">
+            <Link to="/upload" className="inline-flex items-center gap-4 px-12 py-5 bg-cyan-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-cyan-700 transition-all shadow-xl shadow-cyan-900/20">
               Upload First Report
             </Link>
           </div>
@@ -649,132 +879,104 @@ const TrendAnalysis = () => {
   }
 
   return (
-    <Layout>
-      <div className="max-w-7xl mx-auto pb-24 space-y-12">
-        {/* Dynamic Header */}
-        {/* Standardized Header */}
-        <div className="rounded-3xl p-8 text-white mb-6 shadow-xl relative overflow-hidden" style={{ backgroundColor: '#263B6A' }}>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center gap-5">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg border border-white/10">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold mb-1 tracking-tight">Trend Analysis</h1>
-                <p className="text-cyan-100 text-lg opacity-90 leading-tight">Longitudinal Health Intelligence</p>
-              </div>
-            </div>
-
-            {/* View Mode Switcher */}
-            <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10">
-              <button
-                onClick={() => setViewMode('single')}
-                className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'single' ? 'bg-white text-[#263B6A] shadow-xl' : 'text-white/60 hover:text-white'}`}
-              >
-                Analysis
-              </button>
-              <button
-                onClick={() => setViewMode('trends')}
-                className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'trends' ? 'bg-white text-[#263B6A] shadow-xl' : 'text-white/60 hover:text-white'}`}
-              >
-                Fluctuations
-              </button>
-            </div>
+    <Layout
+      title="Trend Analysis"
+      headerActions={
+        <div className="flex items-center gap-3">
+          {/* View Mode Switcher */}
+          <div className="flex bg-slate-100/50 p-1 rounded-xl border border-slate-200 shadow-inner mr-2">
+            <button
+              onClick={() => setViewMode('single')}
+              className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'single' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Analysis
+            </button>
+            <button
+              onClick={() => setViewMode('trends')}
+              className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'trends' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Fluctuations
+            </button>
           </div>
-        </div>
 
-        {/* New Selector Card Section */}
-        <div className="bg-white rounded-3xl p-5 shadow-lg border border-gray-100 mb-8">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center border border-cyan-100 text-cyan-600 shadow-sm">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3zM12 7v10M8 12h8" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-[11px] font-black text-cyan-600 uppercase tracking-widest leading-none mb-1">Source Dataset</p>
-                <p className="text-xs text-gray-500 font-medium">Select an uploaded report for analysis</p>
-              </div>
-            </div>
+          {/* Multi-report Selector */}
+          <div className="relative">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-4 rounded-xl font-bold text-xs shadow-sm flex items-center justify-between gap-3 min-w-[180px] hover:border-slate-300 transition-all"
+            >
+              <span className="truncate">
+                {selectedReports.length === 1
+                  ? selectedReports[0].displayName
+                  : `${selectedReports.length} Selected`}
+              </span>
+              <svg className={`w-3.5 h-3.5 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-            <div className="relative w-full lg:w-96">
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-full bg-gray-50 border-2 border-gray-100 text-gray-700 py-3.5 px-6 rounded-2xl font-bold text-sm shadow-sm flex items-center justify-between outline-none focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500/30 transition-all cursor-pointer"
-              >
-                <span className="truncate">
-                  {selectedReports.length === 1
-                    ? selectedReports[0].displayName
-                    : `${selectedReports.length} Reports Selected`}
-                </span>
-                <svg className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {isDropdownOpen && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-                  <div className="max-h-64 overflow-y-auto py-2">
+            {isDropdownOpen && (() => {
+              return (
+                <div className="absolute right-0 z-[40] w-80 mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-right">
+                  {/* Report list */}
+                  <div className="max-h-56 overflow-y-auto py-1">
                     {extractedMedicalData.map(report => {
                       const isSelected = selectedReports.some(sr => sr.id === report.id);
                       return (
                         <div
                           key={report.id}
                           onClick={() => toggleReportSelection(report)}
-                          className="px-4 py-3 hover:bg-slate-50 flex items-center gap-3 cursor-pointer group transition-colors"
+                          className={`px-4 py-2.5 flex items-center gap-3 cursor-pointer group transition-colors ${
+                            isSelected ? 'bg-cyan-50/60 hover:bg-cyan-50' : 'hover:bg-slate-50'
+                          } ${viewMode === 'single' && isSelected ? 'border-r-4 border-cyan-600' : ''}`}
                         >
-                          <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all ${isSelected ? 'bg-cyan-600 border-cyan-600' : 'border-gray-300 group-hover:border-cyan-400'}`}>
-                            {isSelected && (
-                              <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </div>
-                          <div>
-                            <p className={`text-sm font-bold ${isSelected ? 'text-slate-800' : 'text-slate-500'}`}>{report.reportName}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{report.reportDate}</p>
+                          {viewMode === 'trends' && (
+                            <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all shrink-0 ${isSelected ? 'bg-cyan-600 border-cyan-600' : 'border-gray-300 group-hover:border-cyan-400'}`}>
+                              {isSelected && (
+                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-[11px] font-bold truncate ${isSelected ? 'text-slate-800' : 'text-slate-500'}`}>{report.reportName}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{report.reportDate}</p>
+                              <span className="text-[8px] font-bold text-cyan-600 bg-cyan-50 px-1.5 py-0.5 rounded-md border border-cyan-100 uppercase tracking-wider">{report.category}</span>
+                            </div>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                  <div className="p-2 border-t border-slate-50 bg-slate-50 flex justify-end">
+                  <div className="p-2 border-t border-slate-50 bg-slate-50 flex justify-between items-center">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2">
+                      {selectedReports.length} selected
+                    </span>
                     <button
                       onClick={() => setIsDropdownOpen(false)}
-                      className="px-4 py-1.5 bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
+                      className="px-4 py-1.5 bg-slate-800 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
                     >
                       Done
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
+              );
+            })()}
           </div>
         </div>
+      }
+    >
+      <div className="max-w-7xl mx-auto pb-24 space-y-12">
+
 
         {/* Dynamic Content Area */}
         <div className="relative min-h-[400px]">
           {viewMode === 'single' ? renderSingleReportView() : renderTrendsView()}
         </div>
 
-        {extractedMedicalData.length === 1 && viewMode === 'trends' && (
-          <div className="bg-slate-900 rounded-[3rem] p-12 text-white shadow-2xl relative overflow-hidden text-center max-w-3xl mx-auto mt-8 relative z-20">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-            <div className="relative z-10">
-              <h3 className="text-xl font-black uppercase mb-4 tracking-tighter">Comparative Trends Logic</h3>
-              <p className="text-slate-400 font-bold text-sm mb-8 leading-relaxed px-10">
-                You're viewing the fluctuation profile for your single report. To see progress over time, upload your next medical document!
-              </p>
-              <Link to="/upload-report" className="inline-flex items-center gap-3 px-10 py-5 bg-cyan-600 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-cyan-700 transition-all shadow-xl shadow-cyan-900/40">
-                Upload Next Report
-              </Link>
-            </div>
-          </div>
-        )}
+
       </div>
     </Layout>
   );

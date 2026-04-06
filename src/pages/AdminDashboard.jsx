@@ -234,18 +234,11 @@ const AdminDashboard = () => {
   }, [yearlyRegData, years]);
 
   return (
-    <AdminLayout>
+    <AdminLayout
+      title="Admin Dashboard"
+      subtitle="Welcome back! Here is your platform overview."
+    >
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-[#263B6A] to-[#547792] rounded-2xl p-6 lg:p-10">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">Admin Dashboard</h1>
-          <p className="text-white/80 mt-2">Welcome back! Here is your platform overview.</p>
-          <div className="flex items-center gap-2 mt-4">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-sm text-white/80">System Operational</span>
-          </div>
-
-        </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
           {cards.map((c, i) => (
             <div key={i} className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">

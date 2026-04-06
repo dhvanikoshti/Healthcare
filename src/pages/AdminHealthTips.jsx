@@ -365,10 +365,10 @@ const AdminHealthTips = () => {
         showToastMessage('Health tip added successfully!', 'success');
       } else if (modalMode === 'edit') {
         const tipRef = doc(db, 'healthTips', selectedTip.id);
-        
+
         // Exclude ID and other metadata from the update payload to keep Firestore clean
         const { id, ...updateData } = formData;
-        
+
         const tipUpdate = {
           ...updateData,
           category: finalCategory,
@@ -407,7 +407,27 @@ const AdminHealthTips = () => {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout
+      title={showModal ? "Health Tips Management" : "Health Tips Management"}
+      subtitle={showModal ? "Creating or editing health tips." : "View and manage all health tips articles"}
+      headerActions={
+        !showModal && (
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+
+
+            <button
+              onClick={() => handleOpenModal('add')}
+              className="px-6 py-2.5 bg-[#263B6A] text-white font-bold rounded-xl shadow-md hover:bg-[#1f3057] hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap flex-1 lg:flex-none"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add New Tip
+            </button>
+          </div>
+        )
+      }
+    >
       {showModal ? (
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-xl border border-gray-100 min-h-screen">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 pb-6 border-b border-gray-100">
@@ -509,10 +529,10 @@ const AdminHealthTips = () => {
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-4 pt-4" id="admin-action-buttons">
-                <button onClick={() => { 
-                  setFormData({ ...selectedTip }); 
+                <button onClick={() => {
+                  setFormData({ ...selectedTip });
                   setSections(selectedTip.sections || parseHtmlToSections(selectedTip.content));
-                  setModalMode('edit'); 
+                  setModalMode('edit');
                 }} className="px-6 py-3 bg-[#547792] text-white font-bold rounded-xl hover:bg-[#45667d] transition-all flex items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                   Edit Article
@@ -661,31 +681,6 @@ const AdminHealthTips = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="bg-gradient-to-r from-[#263B6A] to-[#547792] rounded-2xl p-6 md:p-8 ">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-white">Health Tips Management</h1>
-                <p className="text-white/80 mt-2">View and manage all health tips articles</p>
-                <div className="flex items-center gap-4 mt-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-white/80">All Tips Published</span>
-                  </div>
-                  <span className="text-white/40">|</span>
-                  <span className="text-sm text-white/80">{totalTips} Total Tips</span>
-                </div>
-              </div>
-              <button
-                onClick={() => handleOpenModal('add')}
-                className="px-6 py-3.5 bg-white text-[#263B6A] font-bold rounded-xl shadow-lg hover:bg-white hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2 whitespace-nowrap"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add New Tip
-              </button>
-            </div>
-          </div>
 
           <div className="premium-card p-6">
             <div className="flex items-center justify-between mb-6">

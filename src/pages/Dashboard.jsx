@@ -166,13 +166,25 @@ const Dashboard = () => {
       let overallHealth = latest.overall_health || latestAnalysis.overall_health || 'Stable';
       if (overallHealth.length > 25) overallHealth = 'Requires Attention';
 
+      const latestDate = latest.createdAt?.toDate ? latest.createdAt.toDate() : (latest.date ? new Date(latest.date) : new Date());
+      let rawCat = latest.report_category || latest.category || latest.name || 'Unknown Report';
+
+      // Normalize common ones just in case
+      let catStr = String(rawCat).trim();
+      const catStrLower = catStr.toLowerCase();
+      if (catStrLower.includes('cbc') || catStrLower.includes('complete blood count')) {
+        catStr = 'Complete Blood Count (CBC)';
+      } else if (catStrLower.includes('blood test')) {
+        catStr = 'Blood Test';
+      }
+
       setStats({
         totalReports: reports.length,
         criticalAlerts: totalAlerts,
         activeRisks: totalRisks,
         overallHealth: overallHealth,
-        latestUpload: latest.name.length > 15 ? latest.name.substring(0, 15) + '...' : latest.name,
-        lastCheckup: latest.date ? new Date(latest.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Recently'
+        latestUpload: catStr.length > 18 ? catStr.substring(0, 18) + '...' : catStr,
+        lastCheckup: latestDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
       });
 
       setTrendData(yearlyTrend);
@@ -186,20 +198,22 @@ const Dashboard = () => {
   };
 
   return (
-    <Layout>
-      <div className="rounded-3xl p-6 lg:p-10 mb-8 text-white relative overflow-hidden" style={{ backgroundColor: '#263B6A' }}>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"></div>
-        <div className="relative z-10">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold mb-2">Welcome, {userName}</h1>
-              <p className="text-cyan-100 text-lg">Your health insights are synchronized and up to date.</p>
-
-            </div>
+    <Layout
+      title="Dashboard"
+      headerActions={
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex flex-col items-end">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Signed in as</span>
+            <span className="text-xs font-bold text-slate-600">{userName}</span>
+          </div>
+          <div className="h-8 w-[1px] bg-slate-100 mx-2 hidden md:block"></div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 text-[10px] font-bold uppercase tracking-wider">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+            System Live
           </div>
         </div>
-      </div>
+      }
+    >
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
         {[

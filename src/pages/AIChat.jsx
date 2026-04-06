@@ -191,52 +191,30 @@ const AIChat = () => {
   };
 
   return (
-    <Layout>
-      <div className="h-[calc(100vh-140px)] flex flex-col">
-        {/* Header */}
-        <div className="rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-5 mb-2 sm:mb-4 text-white relative overflow-hidden" style={{ backgroundColor: '#263B6A' }}>
-          <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-          <div className="relative z-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div>
-                <h1 className="text-xl lg:text-2xl font-bold mb-1">Health Assistant</h1>
-                <p className="text-cyan-100 text-xs sm:text-sm lg:text-base">Your intelligent health companion</p>
-                <div className="hidden sm:flex flex-wrap gap-2 mt-2">
-                  <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/10">
-                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                    <span className="text-sm font-medium">Online & Ready</span>
-                  </div>
-                  <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/10">
-                    <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <span className="text-sm font-medium">24/7 Available</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* AI Assistant Icon + Clear Chat - Hidden on mobile to save space */}
-              <div className="hidden md:flex items-center gap-3">
-                {/* AI Status */}
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2 lg:p-3 border border-white/10 flex items-center gap-3">
-                  <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="text-left pr-2">
-                    <p className="text-xs text-gray-300">AI Status</p>
-                    <p className="text-sm font-bold text-green-400">Active</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+    <Layout
+      title="Health Assistant"
+      headerActions={
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex flex-col items-end mr-2">
+            <p className="text-[10px] font-black text-[#263B6A] uppercase tracking-widest leading-none mb-1">Your Intelligent</p>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Health Companion</p>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg border border-blue-100 text-[10px] font-bold uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+            Online & Ready
+          </div>
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100 text-[10px] font-bold uppercase tracking-wider">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            24/7 Available
           </div>
         </div>
-
+      }
+    >
+      <div className="h-[calc(100vh-160px)] flex flex-col">
         {/* Chat Container */}
-        <div className="flex-1 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden flex">
+        <div className="flex-1 bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden flex">
           {/* Chat Area */}
           <div className="flex-1 flex flex-col">
             {/* Messages */}

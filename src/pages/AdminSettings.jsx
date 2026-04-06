@@ -299,20 +299,12 @@ const AdminSettings = () => {
   const bloodGroupOptions = bloodGroups.map(bg => ({ label: bg, value: bg }));
 
   return (
-    <AdminLayout>
+    <AdminLayout
+      title="Platform Settings"
+      subtitle="Manage application configuration and integrations"
+    >
 
-      <div>
-        {/* Header */}
-        <div className="rounded-3xl p-6 lg:p-10 mb-8 text-white relative overflow-hidden" style={{ backgroundColor: '#263B6A' }}>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"></div>
-          <div className="relative z-10 text-center md:text-left">
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Admin Settings</h1>
-            <p className="text-cyan-100/90 text-lg">Manage your account and preferences</p>
-          </div>
-        </div>
-
-        {/* Tabs */}
+      <div>        {/* Tabs */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2 custom-scrollbar no-scrollbar">
           {tabs.map((tab) => (
             <button

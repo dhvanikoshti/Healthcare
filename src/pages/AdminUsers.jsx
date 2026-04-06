@@ -4,6 +4,18 @@ import { collection, getDocs, doc, updateDoc, query, orderBy, limit, startAfter,
 import { db } from '../firebase';
 import CustomSelect from '../components/CustomSelect';
 
+// Maps the AI-analyzed overall_health string to a standardized risk level
+const mapOverallHealthToRisk = (healthString) => {
+  if (!healthString) return 'Low';
+  const h = healthString.toUpperCase().trim();
+  // High Risk keywords
+  if (['CRITICAL', 'URGENT', 'POOR', 'HIGH', 'SEVERE', 'DANGEROUS', 'ABNORMAL'].some(k => h.includes(k))) return 'High';
+  // Medium Risk keywords
+  if (['MODERATE', 'BORDERLINE', 'MEDIUM', 'CAUTION', 'ELEVATED', 'FAIR'].some(k => h.includes(k))) return 'Medium';
+  // Default: Low Risk
+  return 'Low';
+};
+
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -87,13 +99,40 @@ const AdminUsers = () => {
         const reportSnapshot = await getCountFromServer(reportsRef);
         const reportCount = reportSnapshot.data().count;
 
+        // Fetch overall_health from the latest report to determine risk level dynamically
+        let dynamicRiskLevel = 'Low';
+        try {
+          const allReportsSnap = await getDocs(reportsRef);
+          if (!allReportsSnap.empty) {
+            // Sort client-side to find the latest report (avoids needing a Firestore index)
+            const sortedDocs = allReportsSnap.docs.sort((a, b) => {
+              const aTime = a.data().createdAt?.toMillis?.() || a.data().createdAt?.seconds * 1000 || 0;
+              const bTime = b.data().createdAt?.toMillis?.() || b.data().createdAt?.seconds * 1000 || 0;
+              return bTime - aTime;
+            });
+            const latestReport = sortedDocs[0].data();
+            
+            // Check multiple possible locations for overall_health
+            const overallHealth = latestReport.overall_health 
+              || latestReport.analysis?.overall_health 
+              || latestReport.overallHealth
+              || latestReport.analysis?.overallHealth
+              || '';
+            
+            console.log(`[AdminUsers] User "${data.name}" (${allReportsSnap.size} reports): overall_health = "${overallHealth}", keys: [${Object.keys(latestReport).join(', ')}]`);
+            dynamicRiskLevel = mapOverallHealthToRisk(overallHealth);
+          }
+        } catch (riskErr) {
+          console.warn(`Could not fetch risk for user ${document.id}:`, riskErr);
+        }
+
         return {
           id: document.id,
           name: data.name || 'Unknown',
           email: data.email || 'No email',
           phone: data.contactNumber || 'N/A',
           status: dynamicStatus,
-          riskLevel: data.riskLevel || 'Low',
+          riskLevel: dynamicRiskLevel,
           reports: reportCount,
           lastActive: lastActiveDate.toISOString().split('T')[0],
           joinedDate: joinedDateObj.toISOString().split('T')[0],
@@ -200,7 +239,10 @@ const AdminUsers = () => {
   ];
 
   return (
-    <AdminLayout>
+    <AdminLayout
+      title={viewUser ? "User Details" : "User Management"}
+      subtitle={viewUser ? `Viewing profile and health records for ${viewUser.name}` : "Manage and monitor all registered users"}
+    >
       {viewUser ? (
         <div className="animate-fade-in space-y-5">
 
@@ -332,15 +374,6 @@ const AdminUsers = () => {
         </div>
       ) : (
         <div className="space-y-6 animate-fade-in">
-          {/* User Management Header */}
-          <div className="bg-gradient-to-r from-[#263B6A] to-[#547792] rounded-2xl p-6 md:p-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-white">User Management</h1>
-                <p className="text-white/80 mt-2">Manage and monitor all registered users</p>
-              </div>
-            </div>
-          </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">

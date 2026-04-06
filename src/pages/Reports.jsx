@@ -207,7 +207,17 @@ const Reports = () => {
 
     return {
       ...report,
-      category: report.category || 'Blood Test',
+      category: (() => {
+        const cat = (report.category || report.analysis?.report_category || report.analysis?.report_type || report.analysis?.category || report.analysis?.type || 'Blood Test').toString().trim();
+        const lowCat = cat.toLowerCase();
+        if (lowCat.includes('cbc') || lowCat.includes('complete blood count')) return 'CBC';
+        if (lowCat.includes('lipid')) return 'Lipid Panel';
+        if (lowCat.includes('thyroid')) return 'Thyroid';
+        if (lowCat.includes('diabetes') || lowCat.includes('glucose')) return 'Diabetes';
+        if (lowCat.includes('liver')) return 'Liver';
+        if (lowCat.includes('blood test') || lowCat.includes('biochemistry')) return 'Blood Test';
+        return cat;
+      })(),
       status: report.status || 'Analyzed',
       hemoglobin: avgHemoglobin,
       risks,
@@ -218,7 +228,9 @@ const Reports = () => {
     };
   });
 
-  const categories = ['Blood Test', 'Lipid Panel', 'CBC', 'Thyroid', 'Diabetes', 'Liver'];
+  const categories = Array.from(new Set(
+    processedReports.map(r => r.category)
+  )).filter(cat => cat && cat.toLowerCase() !== 'all');
 
   const getStatusColor = (status) => {
     if (status === 'Analyzed') return { bg: 'white', border: '#dcfce7', text: '#16a34a', label: 'Analyzed' };
@@ -235,7 +247,15 @@ const Reports = () => {
       'Diabetes': '#ef4444',
       'Liver': '#6366f1',
     };
-    return colors[category] || '#64748b';
+    if (colors[category]) return colors[category];
+
+    // Generate a consistent color based on string hash for new categories
+    let hash = 0;
+    for (let i = 0; i < category.length; i++) {
+      hash = category.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h = Math.abs(hash % 360);
+    return `hsl(${h}, 70%, 50%)`;
   };
   const filteredReports = processedReports.filter(report => {
     const matchesSearch = report.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -283,43 +303,55 @@ const Reports = () => {
   };
 
   return (
-    <Layout>
-      <div>
-        {/* Header Card - Attractive Design */}
-        <div className="rounded-3xl p-8 text-white  mb-8" style={{ backgroundColor: '#263B6A' }}>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="flex items-center gap-5">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold mb-2">My Reports</h1>
-                <p className="text-cyan-100 text-lg">View and manage your medical reports</p>
-              </div>
-            </div>
+    <Layout 
+      title="Medical Reports"
+      headerActions={
+        <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 bg-slate-50 text-slate-500 rounded-lg border border-slate-200/50 text-[10px] font-bold uppercase tracking-widest shadow-sm">
+            <svg className="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M9 4.804A7.993 7.993 0 002 12a7.993 7.993 0 007 7.196V4.804zM11 4.804v14.392A7.993 7.993 0 0018 12a7.993 7.993 0 00-7-7.196z" />
+            </svg>
+            {filteredReports.length} Total
           </div>
+          <div className="h-6 w-[1px] bg-slate-200 mx-1 hidden md:block"></div>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2.5 rounded-xl transition-all duration-200 ${viewMode === 'grid' ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+            title="Grid View"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2.5 rounded-xl transition-all duration-200 ${viewMode === 'list' ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+            title="List View"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+          </button>
         </div>
-
-
-
+      }
+    >
+      <div className="space-y-8">
         {/* Search & Filters */}
-        <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4">
+        <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 mb-8">
+          <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
               <input
                 type="text"
                 placeholder="Search reports by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-3 pl-12 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                className="w-full px-4 py-3 pl-12 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all font-medium text-slate-700"
               />
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <div className="flex flex-col lg:flex-row items-center gap-3 w-full lg:w-auto">
+            <div className="flex flex-col lg:flex-row items-center gap-4 w-full lg:w-auto">
               <CustomSelect
                 options={categoryOptions}
                 value={categoryFilter}
@@ -327,47 +359,24 @@ const Reports = () => {
                 placeholder="All Categories"
                 className="w-full lg:w-56"
               />
-              <div className="flex items-center gap-2 w-full lg:w-auto">
-                <CustomSelect
-                  options={dateFilterOptions}
-                  value={dateFilter}
-                  onChange={(val) => setDateFilter(val)}
-                  placeholder="All Dates"
-                  className="flex-1 lg:w-56"
-                />
-                <div className="flex gap-2 shrink-0">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-3 rounded-xl transition-all duration-200 ${viewMode === 'grid' ? 'bg-gray-800 text-white shadow-md scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                    title="Grid View"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-3 rounded-xl transition-all duration-200 ${viewMode === 'list' ? 'bg-gray-800 text-white shadow-md scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                    title="List View"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
+              <CustomSelect
+                options={dateFilterOptions}
+                value={dateFilter}
+                onChange={(val) => setDateFilter(val)}
+                placeholder="All Dates"
+                className="flex-1 lg:w-56"
+              />
               {dateFilter === 'custom' && (
-                <div className="flex gap-2 w-full sm:w-auto animate-fade-in">
+                <div className="flex gap-2 w-full sm:w-auto animate-in fade-in slide-in-from-top-1 duration-300">
                   <input
                     type="date"
-                    className="flex-1 sm:w-32 px-3 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs shadow-sm"
+                    className="flex-1 sm:w-32 px-3 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs shadow-sm font-bold"
                     value={dateRange.start}
                     onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
                   />
                   <input
                     type="date"
-                    className="flex-1 sm:w-32 px-3 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs shadow-sm"
+                    className="flex-1 sm:w-32 px-3 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs shadow-sm font-bold"
                     value={dateRange.end}
                     onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
                   />

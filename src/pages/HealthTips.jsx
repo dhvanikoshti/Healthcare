@@ -121,32 +121,25 @@ const HealthTips = () => {
   const totalCategories = allCategories.filter(c => c !== 'All').length;
 
   return (
-    <Layout>
-      {/* Attractive Header */}
-      <div className="mb-8">
-        <div className=" rounded-2xl p-8 " style={{ backgroundColor: '#263B6A' }}>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold text-white mb-3">Health Tips & Articles</h1>
-              <p className="text-cyan-100 text-lg">Discover expert advice for a healthier lifestyle</p>
-              <div className="flex items-center gap-4 mt-6">
-                <div className="flex items-center gap-2 text-cyan-100">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                  </svg>
-                  <span>{totalArticles} Articles</span>
-                </div>
-                <div className="flex items-center gap-2 text-cyan-100">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                  </svg>
-                  <span>{totalCategories} Categories</span>
-                </div>
-              </div>
-            </div>
+    <Layout
+      title="Health Tips & Articles"
+      headerActions={
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-500 rounded-lg border border-slate-200/50 text-[10px] font-bold uppercase tracking-widest shadow-sm">
+            <svg className="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9 4.804A7.993 7.993 0 002 12a7.993 7.993 0 007 7.196V4.804zM11 4.804v14.392A7.993 7.993 0 0018 12a7.993 7.993 0 00-7-7.196z" />
+            </svg>
+            {totalArticles} Articles
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-500 rounded-lg border border-slate-200/50 text-[10px] font-bold uppercase tracking-widest shadow-sm">
+            <svg className="w-3.5 h-3.5 text-indigo-500" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M7 13h10v-2H7v2zm0-4h10V7H7v2zm0 8h10v-2H7v2zM5 21h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2z" />
+            </svg>
+            {totalCategories} Categories
           </div>
         </div>
-      </div>
+      }
+    >
 
       {/* Search & Filter */}
       <div className="premium-card p-4 mb-6">
