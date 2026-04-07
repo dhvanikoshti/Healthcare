@@ -20,7 +20,7 @@ const CustomSelect = ({
   const updatePosition = () => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      const menuHeightWithPadding = 320; 
+      const menuHeightWithPadding = Math.min(options.length * 48 + 16, 320); 
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
 
@@ -83,49 +83,57 @@ const CustomSelect = ({
     : placeholder;
 
   const dropdownMenu = (
-    <div 
-      ref={menuRef}
-      style={{
-        position: 'absolute',
-        top: menuPosition.top,
-        left: menuPosition.left,
-        width: menuPosition.width,
-        zIndex: 9999,
-        transform: isOpenUp ? 'translateY(-100%)' : 'translateY(0)',
-        transformOrigin: isOpenUp ? 'bottom' : 'top'
-      }}
-      className=""
-    >
-      <div className={`bg-white border border-gray-100 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] overflow-hidden backdrop-blur-sm bg-white/95 ${isOpenUp ? 'mb-2' : 'mt-0'}`}>
-        <div className="max-h-[300px] overflow-y-auto custom-scrollbar py-2">
-          {options.map((option, index) => {
-            const optLabel = typeof option === 'string' ? option : option.label;
-            const optValue = typeof option === 'string' ? option : option.value;
-            const isSelected = optValue === value;
+    <>
+      {/* Invisible backdrop to capture clicks */}
+      <div 
+        className="fixed inset-0 z-[9998]"
+        onClick={() => setIsOpen(false)}
+      />
+      
+      <div 
+        ref={menuRef}
+        style={{
+          position: 'absolute',
+          top: menuPosition.top,
+          left: menuPosition.left,
+          width: menuPosition.width,
+          zIndex: 9999,
+          transform: isOpenUp ? 'translateY(-100%)' : 'translateY(0)',
+          transformOrigin: isOpenUp ? 'bottom' : 'top'
+        }}
+        className=""
+      >
+        <div className={`bg-white shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] overflow-hidden bg-white/98 rounded-2xl border border-gray-100 ${isOpenUp ? 'mb-2' : 'mt-0'}`}>
+          <div className="max-h-[300px] overflow-y-auto custom-scrollbar py-2">
+            {options.map((option, index) => {
+              const optLabel = typeof option === 'string' ? option : option.label;
+              const optValue = typeof option === 'string' ? option : option.value;
+              const isSelected = optValue === value;
 
-            return (
-              <button
-                key={index}
-                type="button"
-                onClick={() => handleSelect(optValue)}
-                className={`w-full px-5 py-3 text-left text-sm font-semibold transition-all flex items-center justify-between group
-                  ${isSelected ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-indigo-600'}
-                `}
-              >
-                <span className="truncate">{optLabel}</span>
-                {isSelected && (
-                  <div className="w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center scale-100">
-                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                )}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => handleSelect(optValue)}
+                  className={`w-full px-5 py-3 text-left text-sm font-bold flex items-center justify-between group
+                    ${isSelected ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'}
+                  `}
+                >
+                  <span className="truncate">{optLabel}</span>
+                  {isSelected && (
+                    <div className="w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center scale-100 shadow-sm shadow-indigo-200">
+                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 
   return (
@@ -140,9 +148,9 @@ const CustomSelect = ({
         <button
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
-          className={`w-full px-5 py-3 bg-white border-2 rounded-xl text-left text-sm font-bold transition-all duration-300 flex items-center justify-between shadow-sm
-            ${isOpen ? 'border-indigo-500 ring-4 ring-indigo-500/10' : 'border-gray-100 hover:border-gray-200'}
-            ${error ? 'border-red-500 ring-4 ring-red-500/10' : ''}
+          className={`w-full px-5 py-3 bg-white border-2 rounded-xl text-left text-sm font-bold flex items-center justify-between shadow-sm
+            ${isOpen ? 'border-indigo-500' : 'border-gray-100 hover:border-gray-200'}
+            ${error ? 'border-red-500' : ''}
             ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'cursor-pointer'}
           `}
         >
@@ -150,7 +158,7 @@ const CustomSelect = ({
             {displayValue}
           </span>
           <svg 
-            className={`w-5 h-5 text-gray-400 transition-transform duration-500 ${isOpen ? 'rotate-180 text-indigo-500' : ''}`} 
+            className={`w-5 h-5 text-gray-400 ${isOpen ? 'rotate-180 text-indigo-500' : ''}`} 
             fill="none" 
             stroke="currentColor" 
             viewBox="0 0 24 24"

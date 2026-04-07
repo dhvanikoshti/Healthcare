@@ -385,34 +385,27 @@ const UploadReport = () => {
 
           {/* Right: Upload Tips */}
           <div className="lg:col-span-1">
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 shadow-xl shadow-gray-200/50 border border-gray-100 h-full relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-100 rounded-full blur-[50px] opacity-40 -mr-10 -mt-10 pointer-events-none"></div>
-              
-              <div className="flex items-center gap-3 mb-8 relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center border border-purple-100/50">
-                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-base font-black text-gray-800 tracking-tight">Upload Tips</h2>
-                  <p className="text-xs text-gray-400 font-medium">For best analysis results</p>
-                </div>
+            <div className="bg-white rounded-3xl p-4 shadow-lg border border-gray-100 h-full">
+              <div className="flex items-center gap-2 mb-6">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Upload Tips</h2>
               </div>
 
-              <div className="space-y-4 relative z-10">
+              <div className="space-y-6">
                 {[
-                  { id: 1, title: 'Clear Images', desc: 'Ensure reports are well-lit and clearly readable', colorClasses: 'bg-cyan-50 text-cyan-600 border-cyan-100', hoverClasses: 'group-hover:bg-cyan-100', icon: 'M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z' },
-                  { id: 2, title: 'Complete Pages', desc: 'Upload all pages of your diagnostic reports', colorClasses: 'bg-purple-50 text-purple-600 border-purple-100', hoverClasses: 'group-hover:bg-purple-100', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-                  { id: 3, title: 'Formats Supported', desc: 'We support PDF, JPG, and PNG up to 10MB', colorClasses: 'bg-green-50 text-green-600 border-green-100', hoverClasses: 'group-hover:bg-green-100', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12' },
+                  { id: 1, title: 'Clear Images', desc: 'Ensure reports are clearly readable', color: 'cyan' },
+                  { id: 2, title: 'Complete Reports', desc: 'Upload full diagnostic reports', color: 'purple' },
+                  { id: 3, title: 'Multiple Pages', desc: 'Scan all pages of your reports', color: 'green' },
                 ].map((tip) => (
-                  <div key={tip.id} className="flex gap-4 p-4 rounded-2xl bg-white border border-gray-100 hover:border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 group cursor-default">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 transition-all duration-300 group-hover:scale-110 border ${tip.colorClasses} ${tip.hoverClasses}`}>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tip.icon} /></svg>
+                  <div key={tip.id} className="flex gap-3">
+                    <div className={`w-7 h-7 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold text-xs border border-cyan-100 shrink-0`}>
+                      {tip.id}
                     </div>
-                    <div className="flex flex-col justify-center">
-                      <h4 className="font-bold text-gray-800 text-[13px] mb-0.5">{tip.title}</h4>
-                      <p className="text-[11px] text-gray-500 leading-snug">{tip.desc}</p>
+                    <div>
+                      <h4 className="font-bold text-gray-800 text-[13px] leading-tight mb-0">{tip.title}</h4>
+                      <p className="text-[11px] text-gray-500 line-clamp-1">{tip.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -422,121 +415,73 @@ const UploadReport = () => {
         </div>
 
         {/* Bottom Section: Recently Uploaded Reports */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/40 border border-gray-100 overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-b from-cyan-50/50 to-transparent rounded-full blur-[80px] -mt-40 -mr-40 pointer-events-none"></div>
-          
-          <div className="p-6 md:p-8 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10 bg-white/50 backdrop-blur-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-100/50 flex items-center justify-center border border-cyan-200/50 shadow-sm">
-                <svg className="w-6 h-6 text-cyan-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-xl font-black text-gray-800 tracking-tight flex items-center gap-3">
-                  Upload History
-                  <span className="px-2.5 py-1 bg-cyan-50 text-cyan-700 text-xs font-bold rounded-lg border border-cyan-100">
-                    {filteredReports.length}
-                  </span>
-                </h2>
-                <p className="text-xs text-gray-500 font-medium tracking-wide mt-1">Manage and access your previous reports</p>
-              </div>
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <h2 className="text-xl font-bold text-gray-800">Recently Uploaded Reports</h2>
+              <span className="px-2.5 py-1 bg-cyan-50 text-cyan-600 text-xs font-black rounded-full border border-cyan-100">
+                {filteredReports.length}
+              </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="relative group">
+            <div className="flex flex-1 items-center gap-2 sm:gap-3 w-full sm:w-auto">
+              <div className="relative flex-1 min-w-0">
                 <input
                   type="text"
-                  placeholder="Search reports..."
+                  placeholder="Search..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-11 pr-4 py-2.5 w-full md:w-64 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 text-sm shadow-sm transition-all text-gray-700 font-medium placeholder-gray-400 group-hover:border-gray-300"
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs sm:text-sm transition-all"
                 />
-                <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-              <CustomSelect
-                options={[{ label: 'All Dates', value: 'all' }, { label: 'Last Week', value: 'week' }, { label: 'Last Month', value: 'month' }]}
-                value={filterDate}
-                onChange={setFilterDate}
-                placeholder="All Dates"
-                className="w-40 shadow-sm"
-              />
+              <div className="shrink-0 w-32 sm:w-40">
+                <CustomSelect
+                  options={[{ label: 'All Dates', value: 'all' }, { label: 'Last Week', value: 'week' }, { label: 'Last Month', value: 'month' }]}
+                  value={filterDate}
+                  onChange={setFilterDate}
+                  placeholder="All Dates"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="p-4 md:p-6 bg-gray-50/30 max-h-[600px] overflow-y-auto relative z-10">
+          <div className="divide-y divide-gray-50 max-h-[500px] overflow-y-auto">
             {isLoading ? (
-              <div className="py-20 text-center">
-                <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-sm font-bold text-gray-500 animate-pulse">Loading report history...</p>
+              <div className="p-10 text-center">
+                <div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-sm font-medium text-gray-500">Loading your history...</p>
               </div>
             ) : filteredReports.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {filteredReports.map((report) => (
-                  <div key={report.id} className="bg-white p-5 rounded-2xl border border-gray-100 hover:border-cyan-200 shadow-sm hover:shadow-xl hover:shadow-cyan-500/5 transition-all duration-300 group flex flex-col gap-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-12 h-12 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl flex items-center justify-center border border-gray-200 group-hover:scale-110 group-hover:shadow-md transition-all duration-300 shrink-0">
-                          {getFileIcon(report.type)}
-                        </div>
-                        <div className="truncate pr-2">
-                          <h3 className="font-bold text-gray-800 text-sm truncate group-hover:text-cyan-600 transition-colors">{report.name}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] text-gray-500 font-semibold bg-gray-100 px-2 py-0.5 rounded-md">{report.date}</span>
-                            <span className="w-1 h-1 rounded-full bg-gray-300 shrink-0"></span>
-                            <span className="text-[10px] text-gray-500 font-semibold uppercase">{report.size}</span>
-                          </div>
-                        </div>
-                      </div>
+              filteredReports.map((report) => (
+                <div key={report.id} className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 group-hover:scale-105 transition-transform">
+                      {getFileIcon(report.type)}
                     </div>
-                    
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2.5 py-1.5 flex items-center gap-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                          report.status === 'Analyzed' ? 'bg-green-50 text-green-600 border border-green-100' :
-                          report.status === 'Processing' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                          report.status === 'Failed' ? 'bg-red-50 text-red-600 border border-red-100' :
-                          'bg-gray-50 text-gray-600 border border-gray-100'
-                        }`}>
-                          {report.status === 'Analyzed' && <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
-                          {report.status === 'Processing' && <div className="w-3 h-3 border-[2.5px] border-amber-600 border-t-transparent rounded-full animate-spin"></div>}
-                          {report.status === 'Failed' && <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12"/></svg>}
-                          {report.status || 'Uploaded'}
-                        </span>
-                        
-                        {report.category && report.status === 'Analyzed' && (
-                          <span className="px-2.5 py-1.5 bg-purple-50 text-purple-600 border border-purple-100 rounded-lg text-[10px] font-black uppercase tracking-wider truncate max-w-[120px]">
-                            {report.category}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => setViewReport(report)} className="p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-xl transition-all" title="View">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                        </button>
-                        <button onClick={() => handleDownload(report)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all" title="Download">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        </button>
-                        <button onClick={() => deleteReport(report.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Delete">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                      </div>
+                    <div>
+                      <h3 className="font-bold text-gray-800 text-sm">{report.name}</h3>
+                      <p className="text-[10px] text-gray-400 font-semibold uppercase">{report.date} • {report.size}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-20 text-center">
-                <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-5 border border-gray-100 shadow-sm">
-                  <svg className="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setViewReport(report)} className="p-2 text-gray-400 hover:text-cyan-600 hover:bg-white rounded-lg border border-transparent shadow-sm hover:border-gray-100" title="View"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></button>
+                    <button onClick={() => handleDownload(report)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-white rounded-lg border border-transparent shadow-sm hover:border-gray-100" title="Download"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg></button>
+                    <button onClick={() => deleteReport(report.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-white rounded-lg border border-transparent shadow-sm hover:border-gray-100" title="Delete"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                  </div>
                 </div>
-                <h3 className="text-lg font-bold text-gray-800 mb-1">No uploads yet</h3>
-                <p className="text-sm font-medium text-gray-500">Your report history will appear here</p>
+              ))
+            ) : (
+              <div className="p-16 text-center">
+                <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <h3 className="text-base font-bold text-gray-800">No history found</h3>
               </div>
             )}
           </div>

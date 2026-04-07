@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { useState, useEffect, useMemo } from 'react';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import Layout from '../components/Layout';
+import CustomSelect from '../components/CustomSelect';
 
 const quickActions = [
   { name: 'Upload Report', path: '/upload', icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12', color: '#06b6d4' },
@@ -45,8 +46,59 @@ const Dashboard = () => {
     lastCheckup: 'None'
   });
 
-  const [trendData, setTrendData] = useState([]);
-  const [avgHemoglobin, setAvgHemoglobin] = useState(0);
+  const [allReports, setAllReports] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+
+  const { trendData, availableYears } = useMemo(() => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const trend = months.map(m => ({ month: m, reports: 0, risks: 0 }));
+
+    const yearsSet = new Set([new Date().getFullYear().toString()]);
+
+    allReports.forEach(report => {
+      let date;
+      if (report.report_date) {
+        date = new Date(report.report_date);
+      } else if (report.date) {
+        date = new Date(report.date);
+      } else {
+        date = report.createdAt?.toDate() || new Date();
+      }
+      const yearStr = date.getFullYear().toString();
+      yearsSet.add(yearStr);
+
+      if (yearStr === selectedYear || selectedYear === 'All') {
+        const monthIdx = date.getMonth();
+        trend[monthIdx].reports++;
+
+        const analysis = report.analysis || {};
+        const medicalData = report.medicalData || [];
+
+        medicalData.forEach(test => {
+          if (test.status === 'Abnormal' || test.status === 'Critical' || test.status === 'Borderline') {
+            trend[monthIdx].risks++;
+          }
+        });
+
+        if (medicalData.length === 0 && analysis) {
+          const risksRaw = analysis.risks || analysis.risk_assessment || [];
+          if (Array.isArray(risksRaw)) {
+            risksRaw.forEach(risk => {
+              trend[monthIdx].risks++;
+            });
+          }
+        }
+      }
+    });
+
+    const yearsOptions = Array.from(yearsSet)
+      .sort((a, b) => parseInt(b) - parseInt(a))
+      .map(y => ({ label: y, value: y }));
+
+    yearsOptions.unshift({ label: 'All Years', value: 'All' });
+
+    return { trendData: trend, availableYears: yearsOptions };
+  }, [allReports, selectedYear]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -73,14 +125,15 @@ const Dashboard = () => {
       const reportsRef = collection(db, 'users', uid, 'reports');
       const q = query(reportsRef);
       const snapshot = await getDocs(q);
-      const allReports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const fetchedReports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
       // Sort client-side to ensure nothing is filtered out
-      const reports = allReports.sort((a, b) => {
-        const da = a.createdAt?.toDate() || new Date(a.date || 0);
-        const db = b.createdAt?.toDate() || new Date(b.date || 0);
-        return db - da; // Newest first
+      const reports = fetchedReports.sort((a, b) => {
+        const getRD = (r) => r.report_date ? new Date(r.report_date) : (r.date ? new Date(r.date) : (r.createdAt?.toDate() || new Date(0)));
+        return getRD(b) - getRD(a); // Newest first
       });
+
+      setAllReports(reports);
 
       if (reports.length === 0) {
         setLoading(false);
@@ -90,21 +143,8 @@ const Dashboard = () => {
       // Calculate Stats
       let totalAlerts = 0;
       let totalRisks = 0;
-      let hemoglobinSum = 0;
-      let hemoglobinCount = 0;
-
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const yearlyTrend = months.map(m => ({ month: m, reports: 0, risks: 0, hemoglobin: null }));
 
       reports.forEach(report => {
-        const date = report.createdAt?.toDate() || new Date(report.date);
-        const monthIdx = date.getMonth();
-        const year = date.getFullYear();
-
-        if (year === currentYear) {
-          yearlyTrend[monthIdx].reports++;
-        }
-
         // Check both legacy medicalData and new analysis structure
         const analysis = report.analysis || {};
         const medicalData = report.medicalData || [];
@@ -114,19 +154,8 @@ const Dashboard = () => {
           if (test.status === 'Abnormal' || test.status === 'Critical') {
             totalAlerts++;
             totalRisks++;
-            if (year === currentYear) yearlyTrend[monthIdx].risks++;
           } else if (test.status === 'Borderline') {
             totalRisks++;
-            if (year === currentYear) yearlyTrend[monthIdx].risks++;
-          }
-
-          if (test.testName?.toLowerCase().includes('hemoglobin')) {
-            const val = parseFloat(test.testValue);
-            if (!isNaN(val)) {
-              hemoglobinSum += val;
-              hemoglobinCount++;
-              if (year === currentYear) yearlyTrend[monthIdx].hemoglobin = val;
-            }
           }
         });
 
@@ -138,23 +167,6 @@ const Dashboard = () => {
               totalRisks++;
               const sev = (risk.severity || risk.level || '').toUpperCase();
               if (sev === 'HIGH' || sev === 'CRITICAL') totalAlerts++;
-              if (year === currentYear) yearlyTrend[monthIdx].risks++;
-            });
-          }
-
-          // Check for abnormal parameters in analysis
-          const abnParams = analysis.abnormal_parameters || [];
-          if (Array.isArray(abnParams)) {
-            abnParams.forEach(p => {
-              // If not already a risk, count as alert/risk
-              if (p.test_name?.toLowerCase().includes('hemoglobin')) {
-                const val = parseFloat(p.result);
-                if (!isNaN(val)) {
-                  hemoglobinSum += val;
-                  hemoglobinCount++;
-                  if (year === currentYear) yearlyTrend[monthIdx].hemoglobin = val;
-                }
-              }
             });
           }
         }
@@ -166,7 +178,7 @@ const Dashboard = () => {
       let overallHealth = latest.overall_health || latestAnalysis.overall_health || 'Stable';
       if (overallHealth.length > 25) overallHealth = 'Requires Attention';
 
-      const latestDate = latest.createdAt?.toDate ? latest.createdAt.toDate() : (latest.date ? new Date(latest.date) : new Date());
+      const latestDate = latest.report_date ? new Date(latest.report_date) : (latest.date ? new Date(latest.date) : (latest.createdAt?.toDate ? latest.createdAt.toDate() : new Date()));
       let rawCat = latest.report_category || latest.category || latest.name || 'Unknown Report';
 
       // Normalize common ones just in case
@@ -187,9 +199,6 @@ const Dashboard = () => {
         lastCheckup: latestDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
       });
 
-      setTrendData(yearlyTrend);
-      setAvgHemoglobin(hemoglobinCount > 0 ? (hemoglobinSum / hemoglobinCount).toFixed(1) : 0);
-
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
@@ -202,10 +211,6 @@ const Dashboard = () => {
       title="Dashboard"
       headerActions={
         <div className="flex items-center gap-3">
-          <div className="hidden md:flex flex-col items-end">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Signed in as</span>
-            <span className="text-xs font-bold text-slate-600">{userName}</span>
-          </div>
           <div className="h-8 w-[1px] bg-slate-100 mx-2 hidden md:block"></div>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 text-[10px] font-bold uppercase tracking-wider">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -217,7 +222,7 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
         {[
-          { title: 'Total Reports', value: stats.totalReports, icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0112.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z', bg: '#2c5e67ff', light: '#dbe9ebff', badge: 'History' },
+          { title: 'Total Reports', value: stats.totalReports, icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', bg: '#2c5e67ff', light: '#dbe9ebff', badge: 'History' },
           { title: 'Overall Health', value: stats.overallHealth, icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', bg: '#602727ff', light: '#fee2e2', badge: (stats.overallHealth || '').toLowerCase().includes('good') || (stats.overallHealth || '').toLowerCase().includes('normal') ? 'Optimal' : 'Review' },
           { title: 'Last Checkup', value: stats.lastCheckup, icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', bg: '#9e7f4aff', light: '#fef3c7', badge: 'Checkup' },
           { title: 'Latest Upload', value: stats.latestUpload, icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12', bg: '#2c6854ff', light: '#d1fae5', badge: 'Upload' },
@@ -252,16 +257,18 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
         <div className="xl:col-span-2 premium-card p-5 lg:p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
             <div>
-              <h2 className="text-xl font-bold text-gray-800">Health Trends - {currentYear}</h2>
-              <p className="text-sm text-gray-500">Reports and Risk Analysis for {currentYear}</p>
+              <h2 className="text-xl font-bold text-gray-800">Health Trends {selectedYear !== 'All' ? `- ${selectedYear}` : '(All Years)'}</h2>
+              <p className="text-sm text-gray-500">Reports and Risk Analysis for {selectedYear !== 'All' ? selectedYear : 'All Time'}</p>
             </div>
-            <div className="flex items-center gap-2 bg-white border border-cyan-100 px-4 py-2 rounded-xl shadow-sm">
-              <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span className="text-sm font-medium text-cyan-700">{currentYear}</span>
+            <div className="w-40 shrink-0">
+              <CustomSelect
+                options={availableYears}
+                value={selectedYear}
+                onChange={setSelectedYear}
+                className="shadow-sm"
+              />
             </div>
           </div>
           <div className="h-72">
