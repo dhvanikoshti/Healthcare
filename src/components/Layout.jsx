@@ -288,7 +288,7 @@ const Layout = ({ children, title, headerActions }) => {
       </header>
 
       {/* Desktop Sidebar - Collapsible */}
-      <aside className={`hidden lg:flex pt-4 flex-col fixed left-0 top-[60px] bottom-0 z-40 bg-white border-r border-gray-200 shadow-[2px_0_8px_rgba(0,0,0,0.09)] transition-all duration-300 ${sidebarWidth}`}>
+      <aside className={`hidden lg:flex pt-4 flex-col fixed left-0 top-[60px] bottom-0 z-40 bg-white border-r border-gray-200 transition-all duration-300 ${sidebarWidth}`}>
 
         <div className="flex-1 overflow-y-auto py-4 px-3">
           <nav className="space-y-2">
@@ -314,7 +314,7 @@ const Layout = ({ children, title, headerActions }) => {
 
       {/* Mobile Sidebar - Slides in */}
       <aside
-        className={`lg:hidden fixed left-0 top-[60px] bottom-0 pt-4 z-40 bg-white shadow-2xl border-r border-gray-200 w-72 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`lg:hidden fixed left-0 top-[60px] bottom-0 pt-4 z-40 bg-white border-r border-gray-200 w-72 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
 
@@ -365,12 +365,12 @@ const Layout = ({ children, title, headerActions }) => {
 
       <main className={`pt-[60px] transition-all duration-300 ${mainMargin}`} style={{ backgroundColor: 'white' }}>
         {title && (
-          <div className="bg-slate-100/100 border-b border-slate-200/80 pt-10 pb-5 px-6 sm:px-8 lg:px-10 flex items-center justify-between transition-all">
-            <div className="flex items-center gap-4">
-              <div className="h-6 w-1 bg-blue-600 rounded-full shadow-sm shadow-blue-600/20"></div>
-              <h1 className="text-xl font-bold text-slate-800 tracking-tight leading-none">{title}</h1>
+          <div className="bg-slate-100/100 border-b border-slate-200/80 pt-6 sm:pt-10 pb-5 px-6 sm:px-8 lg:px-10 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="h-6 w-1 bg-blue-600 rounded-full shrink-0"></div>
+              <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight leading-none truncate">{title}</h1>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               {headerActions}
             </div>
           </div>

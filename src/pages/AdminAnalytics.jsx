@@ -121,7 +121,7 @@ const AdminAnalytics = () => {
           const data = doc.data();
           let rawCat = data.report_category || data.category || 'Blood Test';
           let cat = String(rawCat).trim();
-          
+
           const catLower = cat.toLowerCase();
           if (catLower.includes('cbc') || catLower.includes('complete blood count')) {
             cat = 'Complete Blood Count (CBC)';

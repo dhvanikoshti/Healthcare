@@ -179,8 +179,8 @@ const TrendAnalysis = () => {
     const activeReport = selectedReports[0];
     if (!activeReport) return null;
     return (
-      <div className="space-y-8 animate-in fade-in duration-500">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] py-4 px-6 shadow-xl shadow-slate-900/5 border border-slate-100 flex flex-col justify-between hover:scale-[1.02] hover:shadow-cyan-500/5 transition-all duration-500 border-b-4 border-b-cyan-500 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
             <div className="relative z-10">
@@ -236,10 +236,10 @@ const TrendAnalysis = () => {
             <div className="absolute top-0 left-0 w-full h-1.5 bg-cyan-500/20">
               <div className="h-full bg-cyan-500 animate-progress w-2/3"></div>
             </div>
-            <div className="w-20 h-20 bg-cyan-50 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-sm">
-              <svg className="w-10 h-10 text-cyan-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-cyan-50 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-sm">
+              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-cyan-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
             </div>
-            <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tight mb-4">Deep Extraction in Progress</h2>
+            <h2 className="text-xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight mb-4 px-4">Deep Extraction in Progress</h2>
             <p className="text-slate-500 max-w-md mx-auto font-medium leading-relaxed mb-8">
               We're using AI to extract medical data from your report. This usually takes 30-60 seconds.
             </p>
@@ -903,14 +903,14 @@ const TrendAnalysis = () => {
           <div className="relative">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-4 rounded-xl font-bold text-xs shadow-sm flex items-center justify-between gap-3 min-w-[180px] hover:border-slate-300 transition-all"
+              className="bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-4 rounded-xl font-bold text-xs shadow-sm flex items-center justify-between gap-3 min-w-[140px] max-w-[160px] sm:max-w-[280px] hover:border-slate-300 transition-all"
             >
-              <span className="truncate">
+              <span className="truncate flex-1 text-left">
                 {selectedReports.length === 1
                   ? selectedReports[0].displayName
                   : `${selectedReports.length} Selected`}
               </span>
-              <svg className={`w-3.5 h-3.5 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-3.5 h-3.5 transition-transform shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
@@ -926,9 +926,8 @@ const TrendAnalysis = () => {
                         <div
                           key={report.id}
                           onClick={() => toggleReportSelection(report)}
-                          className={`px-4 py-2.5 flex items-center gap-3 cursor-pointer group transition-colors ${
-                            isSelected ? 'bg-cyan-50/60 hover:bg-cyan-50' : 'hover:bg-slate-50'
-                          } ${viewMode === 'single' && isSelected ? 'border-r-4 border-cyan-600' : ''}`}
+                          className={`px-4 py-2.5 flex items-center gap-3 cursor-pointer group transition-colors ${isSelected ? 'bg-cyan-50/60 hover:bg-cyan-50' : 'hover:bg-slate-50'
+                            } ${viewMode === 'single' && isSelected ? 'border-r-4 border-cyan-600' : ''}`}
                         >
                           {viewMode === 'trends' && (
                             <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all shrink-0 ${isSelected ? 'bg-cyan-600 border-cyan-600' : 'border-gray-300 group-hover:border-cyan-400'}`}>

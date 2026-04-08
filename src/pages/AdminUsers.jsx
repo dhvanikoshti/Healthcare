@@ -6,12 +6,12 @@ import CustomSelect from '../components/CustomSelect';
 
 // Maps the AI-analyzed overall_health string to a standardized risk level
 const mapOverallHealthToRisk = (healthString) => {
-  if (!healthString) return 'Low';
+  if (!healthString || typeof healthString !== 'string') return 'Low';
   const h = healthString.toUpperCase().trim();
   // High Risk keywords
-  if (['CRITICAL', 'URGENT', 'POOR', 'HIGH', 'SEVERE', 'DANGEROUS', 'ABNORMAL'].some(k => h.includes(k))) return 'High';
+  if (['CRITICAL', 'URGENT', 'POOR', 'HIGH', 'SEVERE', 'DANGEROUS', 'ABNORMAL', 'UNSTABLE', 'RISK'].some(k => h.includes(k))) return 'High';
   // Medium Risk keywords
-  if (['MODERATE', 'BORDERLINE', 'MEDIUM', 'CAUTION', 'ELEVATED', 'FAIR'].some(k => h.includes(k))) return 'Medium';
+  if (['MODERATE', 'BORDERLINE', 'MEDIUM', 'CAUTION', 'ELEVATED', 'FAIR', 'AVERAGE', 'OBSERVATION'].some(k => h.includes(k))) return 'Medium';
   // Default: Low Risk
   return 'Low';
 };
@@ -111,15 +111,16 @@ const AdminUsers = () => {
               return bTime - aTime;
             });
             const latestReport = sortedDocs[0].data();
-            
-            // Check multiple possible locations for overall_health
-            const overallHealth = latestReport.overall_health 
-              || latestReport.analysis?.overall_health 
-              || latestReport.overallHealth
-              || latestReport.analysis?.overallHealth
-              || '';
-            
-            console.log(`[AdminUsers] User "${data.name}" (${allReportsSnap.size} reports): overall_health = "${overallHealth}", keys: [${Object.keys(latestReport).join(', ')}]`);
+
+            // Check multiple possible locations for overall_health (Robust extraction)
+            const overallHealth = 
+                latestReport.analysis?.overall_health 
+                || latestReport.overall_health
+                || latestReport.analysis?.overallHealth
+                || latestReport.overallHealth
+                || latestReport.analysis?.summary // Fallback to summary if health status is missing
+                || '';
+
             dynamicRiskLevel = mapOverallHealthToRisk(overallHealth);
           }
         } catch (riskErr) {

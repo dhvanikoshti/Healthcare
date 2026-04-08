@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import AdminLayout from '../components/AdminLayout';
-import { collection, getDocs, query, limit } from 'firebase/firestore';
+import { collection, getDocs, query, limit, collectionGroup } from 'firebase/firestore';
 import { db } from '../firebase';
 import CustomSelect from '../components/CustomSelect';
 
@@ -14,7 +14,16 @@ const riskData = [
 ];
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState({ totalUsers: 0, monthlyReg: 0, activeUsers: 0, inactiveUsers: 0 });
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    monthlyReg: 0,
+    activeUsers: 0,
+    inactiveUsers: 0,
+    reliabilityScore: 0,
+    successfulReports: 0,
+    failedReports: 0,
+    failureReasons: { missingAnalysis: 0, incompleteResults: 0 }
+  });
   const [yearlyRegData, setYearlyRegData] = useState([]);
 
   const currentYear = new Date().getFullYear();
@@ -43,8 +52,36 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, limit(500));
-        const querySnapshot = await getDocs(q);
+        const qUsers = query(usersRef, limit(500));
+        const usersSnapshot = await getDocs(qUsers);
+
+        // Fetch ALL reports across all users to audit the AI pipeline
+        const reportsRef = collectionGroup(db, 'reports');
+        const reportsSnapshot = await getDocs(query(reportsRef, limit(1000)));
+
+        let totalReports = reportsSnapshot.size;
+        let successfulAnalysis = 0;
+        let failedAnalysis = 0;
+        let reasonCounts = { missingAnalysis: 0, incompleteResults: 0 };
+
+        reportsSnapshot.forEach(doc => {
+          const data = doc.data();
+          // A report is "Success" if it has an analysis object with valid summary/health/risks
+          const hasValidAnalysis = data.analysis && (data.analysis.summary || data.analysis.overall_health || data.analysis.risks);
+
+          if (hasValidAnalysis) {
+            successfulAnalysis++;
+          } else {
+            failedAnalysis++;
+            if (!data.analysis) {
+              reasonCounts.missingAnalysis++;
+            } else {
+              reasonCounts.incompleteResults++;
+            }
+          }
+        });
+
+        const reliabilityScore = totalReports > 0 ? Math.round((successfulAnalysis / totalReports) * 100) : 100;
 
         let total = 0;
         let active = 0;
@@ -53,7 +90,7 @@ const AdminDashboard = () => {
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const regDataMap = {};
 
-        querySnapshot.forEach((doc) => {
+        usersSnapshot.forEach((doc) => {
           const data = doc.data();
           // Exclude any user with admin role or known admin emails
           const isAdmin = data.role === 'admin' ||
@@ -149,7 +186,16 @@ const AdminDashboard = () => {
         const thisMonth = monthNames[new Date().getMonth()];
         const monthlyReg = regDataMap[currentYear]?.[thisMonth] || 0;
 
-        const target = { totalUsers: total, monthlyReg: monthlyReg, activeUsers: active, inactiveUsers: inactive };
+        const target = {
+          totalUsers: total,
+          monthlyReg: monthlyReg,
+          activeUsers: active,
+          inactiveUsers: inactive,
+          reliabilityScore: reliabilityScore,
+          successfulReports: successfulAnalysis,
+          failedReports: failedAnalysis,
+          failureReasons: reasonCounts
+        };
         let step = 0;
         const timer = setInterval(() => {
           step++;
@@ -159,7 +205,11 @@ const AdminDashboard = () => {
             totalUsers: Math.round(target.totalUsers * e),
             monthlyReg: Math.round(target.monthlyReg * e),
             activeUsers: Math.round(target.activeUsers * e),
-            inactiveUsers: Math.round(target.inactiveUsers * e)
+            inactiveUsers: Math.round(target.inactiveUsers * e),
+            reliabilityScore: Math.round(target.reliabilityScore * e),
+            successfulReports: Math.round(target.successfulReports * e),
+            failedReports: Math.round(target.failedReports * e),
+            failureReasons: target.failureReasons
           });
           if (step >= 60) clearInterval(timer);
         }, 25);
@@ -203,6 +253,7 @@ const AdminDashboard = () => {
     },
   ];
 
+
   const chartData = useMemo(() => {
     if (yearlyRegData.length === 0) return [];
 
@@ -239,39 +290,223 @@ const AdminDashboard = () => {
       subtitle="Welcome back! Here is your platform overview."
     >
       <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
-          {cards.map((c, i) => (
-            <div key={i} className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">
-              {/* Soft Gradient Background Blob */}
-              <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none" style={{ backgroundColor: c.bg }}></div>
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+          {/* Column 1: Total Users */}
+          <div className="flex flex-col">
+            <div className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">
+              <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none" style={{ backgroundColor: '#2563EB' }}></div>
               <div className="relative z-10 flex items-start justify-between">
-                <div className="p-3 rounded-xl shadow-sm border border-white/50 group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor: c.light, color: c.bg }}>
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={c.icon} />
-                  </svg>
+                <div className="p-3 rounded-xl shadow-sm border border-white/50 group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor: '#EFF6FF', color: '#2563EB' }}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                 </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border shadow-sm backdrop-blur-md"
-                  style={{ backgroundColor: `${c.light}90`, borderColor: `${c.bg}30`, color: c.bg }}>
-                  <div className="w-1.5 h-1.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: c.bg }}></div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider">
-                    {i === 0 ? 'Overall' : i === 1 ? 'New' : i === 2 ? 'Active' : 'Inactive'}
-                  </span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border shadow-sm backdrop-blur-md" style={{ backgroundColor: '#EFF6FF90', borderColor: '#2563EB30', color: '#2563EB' }}>
+                  <div className="w-1.5 h-1.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: '#2563EB' }}></div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Overall</span>
                 </div>
               </div>
-
               <div className="relative z-10 mt-4 lg:mt-5">
-                <p className="text-xl lg:text-3xl font-bold text-gray-600 tracking-tight drop-shadow-sm tabular-nums">{c.value.toLocaleString()}</p>
-                <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">{c.title}</p>
+                <p className="text-xl lg:text-3xl font-bold text-gray-600 tracking-tight drop-shadow-sm tabular-nums">{stats.totalUsers.toLocaleString()}</p>
+                <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Total Users</p>
               </div>
-
-              {/* Bottom decorative accent line */}
-              <div className="absolute bottom-0 left-0 right-0 h-1 opacity-80 group-hover:h-1.5 transition-all duration-300" style={{ background: `linear-gradient(90deg, ${c.light}, ${c.bg})` }}></div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 opacity-80 group-hover:h-1.5 transition-all duration-300" style={{ background: 'linear-gradient(90deg, #EFF6FF, #2563EB)' }}></div>
             </div>
-          ))}
+          </div>
+
+          {/* Column 2: Monthly Registration */}
+          <div className="flex flex-col">
+            <div className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">
+              <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none" style={{ backgroundColor: '#8B5CF6' }}></div>
+              <div className="relative z-10 flex items-start justify-between">
+                <div className="p-3 rounded-xl shadow-sm border border-white/50 group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor: '#F5F3FF', color: '#8B5CF6' }}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border shadow-sm backdrop-blur-md" style={{ backgroundColor: '#F5F3FF90', borderColor: '#8B5CF630', color: '#8B5CF6' }}>
+                  <div className="w-1.5 h-1.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: '#8B5CF6' }}></div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">New</span>
+                </div>
+              </div>
+              <div className="relative z-10 mt-4 lg:mt-5">
+                <p className="text-xl lg:text-3xl font-bold text-gray-600 tracking-tight drop-shadow-sm tabular-nums">{stats.monthlyReg.toLocaleString()}</p>
+                <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Monthly Registration</p>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 opacity-80 group-hover:h-1.5 transition-all duration-300" style={{ background: 'linear-gradient(90deg, #F5F3FF, #8B5CF6)' }}></div>
+            </div>
+          </div>
+
+          {/* Column 3: Active Users */}
+          <div className="flex flex-col">
+            <div className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">
+              <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none" style={{ backgroundColor: '#10B981' }}></div>
+              <div className="relative z-10 flex items-start justify-between">
+                <div className="p-3 rounded-xl shadow-sm border border-white/50 group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor: '#ECFDF5', color: '#10B981' }}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border shadow-sm backdrop-blur-md" style={{ backgroundColor: '#ECFDF590', borderColor: '#10B98130', color: '#10B981' }}>
+                  <div className="w-1.5 h-1.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: '#10B981' }}></div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Active</span>
+                </div>
+              </div>
+              <div className="relative z-10 mt-4 lg:mt-5">
+                <p className="text-xl lg:text-3xl font-bold text-gray-600 tracking-tight drop-shadow-sm tabular-nums">{stats.activeUsers.toLocaleString()}</p>
+                <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Active Users</p>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 opacity-80 group-hover:h-1.5 transition-all duration-300" style={{ background: 'linear-gradient(90deg, #ECFDF5, #10B981)' }}></div>
+            </div>
+          </div>
+
+          {/* Column 4: Inactive Users */}
+          <div className="flex flex-col">
+            <div className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">
+              <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none" style={{ backgroundColor: '#946161ff' }}></div>
+              <div className="relative z-10 flex items-start justify-between">
+                <div className="p-3 rounded-xl shadow-sm border border-white/50 group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor: '#FEF2F2', color: '#946161ff' }}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zm11-4h-4v-2h4v2z" /></svg>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border shadow-sm backdrop-blur-md" style={{ backgroundColor: '#FEF2F290', borderColor: '#94616130', color: '#946161ff' }}>
+                  <div className="w-1.5 h-1.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: '#946161ff' }}></div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Inactive</span>
+                </div>
+              </div>
+              <div className="relative z-10 mt-4 lg:mt-5">
+                <p className="text-xl lg:text-3xl font-bold text-gray-600 tracking-tight drop-shadow-sm tabular-nums">{stats.inactiveUsers.toLocaleString()}</p>
+                <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Inactive Users</p>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 opacity-80 group-hover:h-1.5 transition-all duration-300" style={{ background: 'linear-gradient(90deg, #FEF2F2, #946161ff)' }}></div>
+            </div>
+          </div>
         </div>
 
-        <div className="premium-card p-4 sm:p-6">
+        {/* --- ENHANCED AI DIAGNOSTIC HEALTH (Positioned below the cards row) --- */}
+        <div className="premium-card relative p-6 lg:p-8 border-slate-200/60 bg-white/50 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-700 overflow-hidden group">
+          {/* Subtle background decoration */}
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-cyan-100/20 rounded-full blur-3xl group-hover:bg-cyan-100/30 transition-colors duration-700"></div>
+          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-100/20 rounded-full blur-3xl group-hover:bg-indigo-100/30 transition-colors duration-700"></div>
+
+          <div className="relative z-10">
+            {/* Header section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-cyan-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:rotate-6 transition-transform duration-500">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-Arial font-bold text-slate-700">AI Performance Monitor</h3>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1.5">Automated Intelligence Pipeline Integrity</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 border border-slate-100 rounded-full">
+                <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${stats.reliabilityScore > 90 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`}></div>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{stats.reliabilityScore > 80 ? 'System Optimal' : 'Degraded Performance'}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              {/* Left Column: Reliability Gauge */}
+              <div className="lg:col-span-4 flex flex-col items-center justify-center p-6 bg-slate-50/50 rounded-[2rem] border border-slate-100 shadow-inner">
+                <div className="w-32 h-32 lg:w-40 lg:h-40 relative flex items-center justify-center">
+                  <svg className="w-full h-full -rotate-90">
+                    <circle cx="50%" cy="50%" r="42%" className="stroke-slate-200/50 fill-none" strokeWidth="12" />
+                    <circle
+                      cx="50%" cy="50%" r="42%"
+                      className={`${stats.reliabilityScore > 80 ? 'stroke-cyan-500' : 'stroke-amber-500'} fill-none transition-all duration-1000 ease-out`}
+                      strokeWidth="12"
+                      strokeDasharray="264"
+                      strokeDashoffset={264 - (264 * stats.reliabilityScore) / 100}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl lg:text-5xl font-black text-slate-800 tracking-tighter tabular-nums">{stats.reliabilityScore}<span className="text-xl lg:text-3xl">%</span></span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none mt-2">Stability</span>
+                  </div>
+                </div>
+                <div className="mt-6 text-center">
+                  <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Global Extraction Health</p>
+                  <div className="flex items-center gap-2 mt-2 justify-center">
+                    <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+                    <span className="text-[10px] font-bold text-slate-400 italic">Auditing {stats.successfulReports + stats.failedReports} recent pulses</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Mini Cards & Audit Logs */}
+              <div className="lg:col-span-8 space-y-6">
+                {/* 2 Success/Failed Inner Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 uppercase tracking-tight">
+                  <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-100/50 shadow-sm transition-transform hover:-translate-y-1 duration-300">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-600">
+                        <svg className="w-6 h-6 shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                      </div>
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-md text-[9px] font-black tracking-widest">Optimal</span>
+                    </div>
+                    <p className="text-4xl font-black text-slate-800 tabular-nums leading-none mb-1">{stats.successfulReports}</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Successful Executions</p>
+                  </div>
+
+                  <div className="p-6 rounded-3xl bg-gradient-to-br from-rose-50 to-white border border-rose-100/50 shadow-sm transition-transform hover:-translate-y-1 duration-300">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-10 h-10 bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-600">
+                        <svg className="w-6 h-6 shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                      </div>
+                      <span className={`px-2 py-0.5 ${stats.failedReports > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'} rounded-md text-[9px] font-black tracking-widest uppercase`}>{stats.failedReports > 0 ? 'Alert' : 'Stable'}</span>
+                    </div>
+                    <p className={`text-4xl font-black tabular-nums leading-none mb-1 ${stats.failedReports > 0 ? 'text-rose-600' : 'text-slate-400'}`}>{stats.failedReports}</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Processing Incidents</p>
+                  </div>
+                </div>
+
+                {/* Audit Breakthrough / Reasons */}
+                <div className="bg-slate-50/80 rounded-3xl p-6 border border-slate-100">
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="text-[15px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                      Processing Reason Audit
+                      <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                      <span className="text-[11px] text-slate-400 lowercase font-bold tracking-normal italic font-serif">Deep Extraction analysis</span>
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-bold text-slate-400 uppercase tracking-widest">Stability Profile:</span>
+                      <span className={`text-[14px] font-black uppercase ${stats.reliabilityScore > 85 ? 'text-emerald-500' : 'text-amber-500'}`}>{stats.reliabilityScore > 85 ? 'A+' : 'Check Config'}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                    <div className="flex items-center justify-between p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+                      <div className="flex items-center gap-4">
+                        <div className="w-2 h-12 bg-rose-400 rounded-full"></div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-700 uppercase tracking-tight">Missing AI Signal</p>
+                          <p className="text-[10px] font-bold text-slate-400 leading-none mt-1.5 uppercase">n8n payload empty</p>
+                        </div>
+                      </div>
+                      <span className="text-xl font-black text-slate-800 tabular-nums">{stats.failureReasons.missingAnalysis}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+                      <div className="flex items-center gap-4">
+                        <div className="w-2 h-12 bg-amber-400 rounded-full"></div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-700 uppercase tracking-tight">Partial Extraction</p>
+                          <p className="text-[10px] font-bold text-slate-400 leading-none mt-1.5 uppercase">Schema mismatch</p>
+                        </div>
+                      </div>
+                      <span className="text-xl font-black text-slate-800 tabular-nums">{stats.failureReasons.incompleteResults}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex items-center gap-3 pt-6 border-t border-slate-100/50">
+                    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">
+                      Note: AI reliability is computed across all users globally. High failure rates may indicate webhook timeouts.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="premium-card p-4 sm:p-6 mt-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#547792] to-[#263B6A] flex items-center justify-center shadow-lg">

@@ -45,12 +45,12 @@ const HealthInsights = () => {
   useEffect(() => {
     const fetchReportsAndData = async () => {
       // Don't settle the loading state until we know if a user is logged in
-      if (currentUser === undefined) return; 
-      if (!currentUser) { 
-        setIsLoading(false); 
-        return; 
+      if (currentUser === undefined) return;
+      if (!currentUser) {
+        setIsLoading(false);
+        return;
       }
-      
+
       try {
         // 1. Fetch all reports to determine if data exists
         const qAll = query(collection(db, 'users', currentUser.uid, 'reports'));
@@ -222,7 +222,7 @@ const HealthInsights = () => {
   }
 
   return (
-    <Layout 
+    <Layout
       title="Health Insights"
       headerActions={
         <div className="flex items-center gap-3">
@@ -238,10 +238,10 @@ const HealthInsights = () => {
               <span className="truncate max-w-[180px]">
                 {userReports.find(r => r.id === selectedReportId)?.displayName || 'Select Dataset'}
               </span>
-              <svg 
-                className={`w-4 h-4 text-indigo-500 transition-transform duration-300 ${isDatasetOpen ? 'rotate-180' : ''}`} 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className={`w-4 h-4 text-indigo-500 transition-transform duration-300 ${isDatasetOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
@@ -401,7 +401,7 @@ const HealthInsights = () => {
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medical Parameters</span>
                         <div className="h-[1px] flex-1 bg-slate-50"></div>
                       </div>
-                      
+
                       {diagnoses.length > 0 ? (
                         <div className="grid grid-cols-1 gap-4">
                           {diagnoses.map((diagnosis) => {

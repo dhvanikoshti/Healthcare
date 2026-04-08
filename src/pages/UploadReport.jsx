@@ -416,7 +416,7 @@ const UploadReport = () => {
 
         {/* Bottom Section: Recently Uploaded Reports */}
         <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="p-4 sm:p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -427,14 +427,14 @@ const UploadReport = () => {
               </span>
             </div>
 
-            <div className="flex flex-1 items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="flex flex-1 items-center gap-2 sm:gap-3 w-full sm:w-auto min-w-0">
               <div className="relative flex-1 min-w-0">
                 <input
                   type="text"
                   placeholder="Search..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs sm:text-sm transition-all"
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs sm:text-sm transition-all truncate"
                 />
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -459,14 +459,14 @@ const UploadReport = () => {
               </div>
             ) : filteredReports.length > 0 ? (
               filteredReports.map((report) => (
-                <div key={report.id} className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors group">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 group-hover:scale-105 transition-transform">
+                <div key={report.id} className="p-3 sm:p-5 flex items-center justify-between hover:bg-gray-50 transition-colors group">
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 group-hover:scale-105 transition-transform shrink-0">
                       {getFileIcon(report.type)}
                     </div>
-                    <div>
-                      <h3 className="font-bold text-gray-800 text-sm">{report.name}</h3>
-                      <p className="text-[10px] text-gray-400 font-semibold uppercase">{report.date} • {report.size}</p>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-gray-800 text-sm truncate">{report.name}</h3>
+                      <p className="text-[10px] text-gray-400 font-semibold uppercase truncate">{report.date} • {report.size}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

@@ -16,6 +16,7 @@ import AdminUsers from './pages/AdminUsers';
 import AdminAnalytics from './pages/AdminAnalytics';
 import AdminHealthTips from './pages/AdminHealthTips';
 import AdminSettings from './pages/AdminSettings';
+import AdminReports from './pages/AdminReports';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -37,13 +38,14 @@ function App() {
         <Route path="/settings" element={<ProtectedRoute requiredRole="user"><Settings /></ProtectedRoute>} />
         <Route path="/health-tips" element={<ProtectedRoute><HealthTips /></ProtectedRoute>} />
         <Route path="/health-tips/:id" element={<ProtectedRoute><HealthTipDetail /></ProtectedRoute>} />
-        
+
         {/* Admin Routes */}
         <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
         <Route path="/admin/analytics" element={<ProtectedRoute requiredRole="admin"><AdminAnalytics /></ProtectedRoute>} />
         <Route path="/admin/health-tips" element={<ProtectedRoute requiredRole="admin"><AdminHealthTips /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
+        <Route path="/admin/reports" element={<ProtectedRoute requiredRole="admin"><AdminReports /></ProtectedRoute>} />
 
       </Routes>
     </Router>
