@@ -209,13 +209,10 @@ const Dashboard = () => {
   return (
     <Layout
       title="Dashboard"
-      headerActions={
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-[1px] bg-slate-100 mx-2 hidden md:block"></div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 text-[10px] font-bold uppercase tracking-wider">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-            System Live
-          </div>
+      titleBadge={
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+          System Live
         </div>
       }
     >
@@ -257,12 +254,12 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
         <div className="xl:col-span-2 premium-card p-5 lg:p-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">Health Trends {selectedYear !== 'All' ? `- ${selectedYear}` : '(All Years)'}</h2>
-              <p className="text-sm text-gray-500">Reports and Risk Analysis for {selectedYear !== 'All' ? selectedYear : 'All Time'}</p>
+          <div className="flex items-center justify-between mb-6 gap-2">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 truncate">Health Trends {selectedYear !== 'All' ? `- ${selectedYear}` : ''}</h2>
+              <p className="text-[10px] sm:text-sm text-gray-500 leading-tight">{selectedYear !== 'All' ? `Reports and Risk Analysis for ${selectedYear}` : 'All Time Analysis'}</p>
             </div>
-            <div className="w-40 shrink-0">
+            <div className="w-28 sm:w-40 shrink-0">
               <CustomSelect
                 options={availableYears}
                 value={selectedYear}
