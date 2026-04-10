@@ -180,124 +180,170 @@ const TrendAnalysis = () => {
     if (!activeReport) return null;
     return (
       <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] py-4 px-6 shadow-xl shadow-slate-900/5 border border-slate-100 flex flex-col justify-between hover:scale-[1.02] hover:shadow-cyan-500/5 transition-all duration-500 border-b-4 border-b-cyan-500 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 bg-cyan-100/50 rounded-xl flex items-center justify-center border border-cyan-200/50 shadow-inner group-hover:rotate-12 transition-transform">
-                  <svg className="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 w-full">
+          {/* TOTAL TESTS */}
+          <div className="group relative bg-white/80 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2rem] p-3 sm:p-4 border border-slate-200 shadow-xl shadow-slate-900/5 hover:shadow-cyan-500/10 hover:-translate-y-1 transition-all duration-500 overflow-hidden w-full h-full flex flex-col justify-between">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-cyan-100/50 group-hover:rotate-12 transition-transform duration-500">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-cyan-50 rounded-lg flex items-center justify-center border border-cyan-100">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                  </div>
                 </div>
-                <p className="text-[10px] font-black text-cyan-700/60 uppercase tracking-[0.2em]">Total Tests</p>
+                <div>
+                  <p className="text-[9px] sm:text-[11px] font-black text-cyan-600 italic uppercase tracking-widest leading-none">Total Tests</p>
+                </div>
+              </div>
+
+              <div className="mt-3 sm:mt-4 flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-2xl sm:text-4xl font-black text-sky-600 tracking-tighter group-hover:scale-105 transition-transform duration-500 origin-bottom-left">
+                  {activeReport.medicalData?.length || 0}
+                </span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Parameters</span>
               </div>
             </div>
-            <p className="text-3xl font-black text-slate-800 relative z-10 tracking-tighter group-hover:translate-x-1 transition-transform">{activeReport.medicalData?.length || 0}</p>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 to-cyan-600 opacity-100 transition-opacity"></div>
           </div>
-          <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] py-4 px-6 shadow-xl shadow-slate-900/5 border border-slate-100 flex flex-col justify-between hover:scale-[1.02] hover:shadow-emerald-500/5 transition-all duration-500 border-b-4 border-b-emerald-500 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 bg-emerald-100/50 rounded-xl flex items-center justify-center border border-emerald-200/50 shadow-inner group-hover:rotate-12 transition-transform">
-                  <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+
+          {/* LOW RISK */}
+          <div className="group relative bg-white/80 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2rem] p-3 sm:p-4 border border-slate-200 shadow-xl shadow-slate-900/5 hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-500 overflow-hidden w-full h-full flex flex-col justify-between">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-emerald-100/50 group-hover:rotate-12 transition-transform duration-500">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-emerald-50 rounded-lg flex items-center justify-center border border-emerald-100">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </div>
                 </div>
-                <p className="text-[10px] font-black text-emerald-700/60 uppercase tracking-[0.2em]">Low Risk</p>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-[11px] font-black text-emerald-600 italic uppercase tracking-widest leading-none truncate">Low Risk</p>
+                </div>
+              </div>
+
+              <div className="mt-3 sm:mt-4 flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-2xl sm:text-4xl font-black text-emerald-600 tracking-tighter group-hover:scale-105 transition-transform duration-500 origin-bottom-left">
+                  {activeReport.medicalData?.filter(t => (t.status || '').toLowerCase() === 'normal' || (t.status || '').toLowerCase() === 'optimal').length || 0}
+                </span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Optimal</span>
               </div>
             </div>
-            <p className="text-3xl font-black text-emerald-600 relative z-10 tracking-tighter group-hover:translate-x-1 transition-transform">{activeReport.medicalData?.filter(t => (t.status || '').toLowerCase() === 'normal' || (t.status || '').toLowerCase() === 'optimal').length || 0}</p>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600 opacity-100 transition-opacity"></div>
           </div>
-          <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] py-4 px-6 shadow-xl shadow-slate-900/5 border border-slate-100 flex flex-col justify-between hover:scale-[1.02] hover:shadow-amber-500/5 transition-all duration-500 border-b-4 border-b-amber-500 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 bg-amber-100/50 rounded-xl flex items-center justify-center border border-amber-200/50 shadow-inner group-hover:rotate-12 transition-transform">
-                  <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+
+          {/* MEDIUM RISK */}
+          <div className="group relative bg-white/80 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2rem] p-3 sm:p-4 border border-slate-200 shadow-xl shadow-slate-900/5 hover:shadow-orange-500/10 hover:-translate-y-1 transition-all duration-500 overflow-hidden w-full h-full flex flex-col justify-between">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-orange-100/50 group-hover:rotate-12 transition-transform duration-500">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-50 rounded-lg flex items-center justify-center border border-orange-100">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  </div>
                 </div>
-                <p className="text-[10px] font-black text-amber-700/60 uppercase tracking-[0.2em]">Medium Risk</p>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-[11px] font-black text-orange-600 italic uppercase tracking-widest leading-none truncate">Medium Risk</p>
+                </div>
+              </div>
+
+              <div className="mt-3 sm:mt-4 flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-2xl sm:text-4xl font-black text-orange-600 tracking-tighter group-hover:scale-105 transition-transform duration-500 origin-bottom-left">
+                  {activeReport.medicalData?.filter(t => ['borderline', 'low', 'warning'].includes((t.status || '').toLowerCase())).length || 0}
+                </span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Caution</span>
               </div>
             </div>
-            <p className="text-3xl font-black text-amber-600 relative z-10 tracking-tighter group-hover:translate-x-1 transition-transform">{activeReport.medicalData?.filter(t => ['borderline', 'low', 'high', 'warning'].includes((t.status || '').toLowerCase())).length || 0}</p>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 to-orange-600 opacity-100 transition-opacity"></div>
           </div>
-          <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] py-4 px-6 shadow-xl shadow-slate-900/5 border border-slate-100 flex flex-col justify-between hover:scale-[1.02] hover:shadow-red-500/5 transition-all duration-500 border-b-4 border-b-red-500 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 bg-red-100/50 rounded-xl flex items-center justify-center border border-red-200/50 shadow-inner group-hover:rotate-12 transition-transform">
-                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+
+          {/* HIGH RISK */}
+          <div className="group relative bg-white/80 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2rem] p-3 sm:p-4 border border-slate-200 shadow-xl shadow-slate-900/5 hover:shadow-red-500/10 hover:-translate-y-1 transition-all duration-500 overflow-hidden w-full h-full flex flex-col justify-between">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-red-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-red-100/50 group-hover:rotate-12 transition-transform duration-500">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-50 rounded-lg flex items-center justify-center border border-red-100">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </div>
                 </div>
-                <p className="text-[10px] font-black text-red-700/60 uppercase tracking-[0.2em]">High Risk</p>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-[11px] font-black text-red-600 italic uppercase tracking-widest leading-none truncate">High Risk</p>
+                </div>
+              </div>
+
+              <div className="mt-3 sm:mt-4 flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-2xl sm:text-3xl sm:text-4xl font-black text-red-600 tracking-tighter group-hover:scale-105 transition-transform duration-500 origin-bottom-left">
+                  {activeReport.medicalData?.filter(t => ['high', 'abnormal', 'critical', 'dangerous'].includes((t.status || '').toLowerCase())).length || 0}
+                </span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Review Needed</span>
               </div>
             </div>
-            <p className="text-3xl font-black text-red-600 relative z-10 tracking-tighter group-hover:translate-x-1 transition-transform">{activeReport.medicalData?.filter(t => ['abnormal', 'critical', 'dangerous'].includes((t.status || '').toLowerCase())).length || 0}</p>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-400 to-red-600 opacity-100 transition-opacity"></div>
           </div>
         </div>
 
         {!activeReport.hasAnalysis ? (
-          <div className="bg-white rounded-[2rem] p-16 text-center border border-slate-100 shadow-xl overflow-hidden relative">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-cyan-500/20">
-              <div className="h-full bg-cyan-500 animate-progress w-2/3"></div>
-            </div>
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-cyan-50 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-sm">
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-cyan-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-            </div>
-            <h2 className="text-xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight mb-4 px-4">Deep Extraction in Progress</h2>
-            <p className="text-slate-500 max-w-md mx-auto font-medium leading-relaxed mb-8">
-              We're using AI to extract medical data from your report. This usually takes 30-60 seconds.
-            </p>
+          <div className="bg-slate-50/50 rounded-[2rem] sm:rounded-[3rem] p-2 sm:p-4 lg:p-6 border border-slate-200/50 shadow-inner">
+            <div className="bg-white rounded-[1.5rem] sm:rounded-[2.5rem] p-6 lg:p-10 text-center shadow-2xl border border-slate-200 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full translate-x-1/2 -translate-y-1/2 group-hover:scale-110 transition-transform duration-700"></div>
 
-            <div className="flex flex-col items-center gap-4">
-              <button
-                onClick={() => fetchUserReports(currentUser.uid)}
-                className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                Refresh Data
-              </button>
-              <div className="flex items-center justify-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce"></span>
-                <span className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce [animation-delay:-0.15s]"></span>
-                <span className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce [animation-delay:-0.3s]"></span>
+              <div className="relative z-10 max-w-lg mx-auto">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-slate-900/40 group-hover:rotate-12 transition-transform duration-500">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+
+                <h2 className="text-base sm:text-3xl font-black text-slate-800 uppercase tracking-tighter mb-4 flex flex-col gap-1 sm:gap-2">
+                  <span>Please Select Report</span>
+                  <span className="text-blue-600">For Analysis</span>
+                </h2>
+
+                <p className="text-slate-500 font-medium text-xs sm:text-sm leading-relaxed mb-8">
+                  Select a report from the selector above to unlock deep medical insights. If you've just uploaded a report, we're currently extracting the data using AI.
+                </p>
               </div>
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
-            <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-hidden">
+            <div className="px-8 py-6 bg-slate-200 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-slate-800 uppercase tracking-tight">Full Report Analysis</h2>
-                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">{activeReport.reportName} — {activeReport.reportDate}</p>
+                <h2 className="text-xl font-black  text-blue-900 uppercase">Full Report Analysis</h2>
+                <p className="text-slate-600 text-[10px] font-bold uppercase tracking-widest mt-1">{activeReport.reportName} — {activeReport.reportDate}</p>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-hide">
               {activeReport.medicalData.length > 0 ? (
-                <table className="w-full">
+                <table className="w-full min-w-[600px] sm:min-w-0">
                   <thead>
                     <tr className="text-left bg-white">
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Parameter</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Result</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unit</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Reference Range</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                      <th className="px-5 sm:px-8 py-4 sm:py-5 text-[13px] sm:text-[15px] font-black text-slate-500 uppercase tracking-widest">Parameter</th>
+                      <th className="px-5 sm:px-6 py-4 sm:py-5 text-[13px] sm:text-[15px] font-black text-slate-500 uppercase tracking-widest">Result</th>
+                      <th className="px-5 sm:px-6 py-4 sm:py-5 text-[13px] sm:text-[15px] font-black text-slate-500 uppercase tracking-widest">Unit</th>
+                      <th className="px-5 sm:px-6 py-4 sm:py-5 text-[13px] sm:text-[15px] font-black text-slate-500 uppercase tracking-widest hidden sm:table-cell">Reference Range</th>
+                      <th className="px-5 sm:px-6 py-4 sm:py-5 text-[13px] sm:text-[15px] font-black text-slate-500 uppercase tracking-widest text-right sm:text-left">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-slate-100">
                     {activeReport.medicalData.map((test, idx) => {
                       const statusDetails = getStatusBadge(test.status);
-                      const history = extractedMedicalData
-                        .filter(r => r.medicalData?.some(t => t.testName === test.testName))
-                        .map(r => ({ value: parseFloat(r.medicalData.find(t => t.testName === test.testName).testValue) }))
-                        .slice(-5);
-
                       return (
-                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
-                          <td className="px-8 py-6">
-                            <span className="text-sm font-bold text-slate-700 block transition-colors">{test.testName}</span>
+                        <tr key={idx} className="hover:bg-slate-100/100 transition-colors group">
+                          <td className="px-5 sm:px-8 py-4 sm:py-6">
+                            <span className="text-xs sm:text-sm font-bold text-slate-700 block">{test.testName}</span>
+                            <span className="text-[8px] font-medium text-slate-400 sm:hidden block mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">Ref: {test.referenceRange || 'N/A'}</span>
                           </td>
-                          <td className="px-6 py-6 font-black text-slate-800 text-lg">{test.testValue}</td>
-                          <td className="px-6 py-6 text-xs font-bold text-slate-500 uppercase">{test.units || '—'}</td>
-                          <td className="px-6 py-6 text-xs font-bold text-slate-400">{test.referenceRange || 'N/A'}</td>
-                          <td className="px-6 py-6 text-left">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-sm border" style={{ backgroundColor: statusDetails.bg, color: statusDetails.text, borderColor: statusDetails.text + '20' }}>
-                              {statusDetails.icon} {statusDetails.label}
+                          <td className="px-5 sm:px-6 py-4 sm:py-6 font-black text-slate-800 text-sm sm:text-lg">{test.testValue}</td>
+                          <td className="px-5 sm:px-6 py-4 sm:py-6 text-[10px] sm:text-xs font-bold text-slate-500 uppercase">{test.units || '—'}</td>
+                          <td className="px-5 sm:px-6 py-4 sm:py-6 text-[10px] sm:text-xs font-bold text-slate-400 hidden sm:table-cell">{test.referenceRange || 'N/A'}</td>
+                          <td className="px-5 sm:px-6 py-4 sm:py-6 text-right sm:text-left">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-tighter shadow-sm border" style={{ backgroundColor: statusDetails.bg, color: statusDetails.text, borderColor: statusDetails.text + '20' }}>
+                              <span className="sm:inline hidden">{statusDetails.icon}</span> {statusDetails.label}
                             </span>
                           </td>
                         </tr>
@@ -326,15 +372,26 @@ const TrendAnalysis = () => {
     // ── 0. Require at least 1 selected report ────────────────────────────────
     if (selectedReports.length < 1) {
       return (
-        <div className="bg-slate-50 rounded-[3rem] p-4 lg:p-6 border border-slate-100/50 shadow-inner">
-          <div className="bg-white rounded-[2.5rem] p-12 text-center shadow-xl border border-slate-100 transition-all">
-            <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-blue-100/50">
-              <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+        <div className="bg-slate-50/50 rounded-[2rem] sm:rounded-[3rem] p-2 sm:p-4 lg:p-6 border border-slate-200/50 shadow-inner">
+          <div className="bg-white rounded-[1.5rem] sm:rounded-[2.5rem] p-6 lg:p-10 text-center shadow-2xl border border-slate-200 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full translate-x-1/2 -translate-y-1/2 group-hover:scale-110 transition-transform duration-700"></div>
+
+            <div className="relative z-10 max-w-lg mx-auto">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-slate-900/40 group-hover:rotate-12 transition-transform duration-500">
+                <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+
+              <h2 className="text-base sm:text-3xl font-black text-slate-800 uppercase tracking-tighter mb-4 flex flex-col gap-1 sm:gap-2">
+                <span>Please Select Reports</span>
+                <span className="text-blue-600">For Fluctuation</span>
+              </h2>
+
+              <p className="text-slate-500 font-medium text-xs sm:text-sm leading-relaxed mb-8">
+                Please select at least <strong>one report</strong> from the dataset selector above to view longitudinal health fluctuations and parameter trends across your history.
+              </p>
             </div>
-            <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight mb-3">Select a Report</h2>
-            <p className="text-slate-500 max-w-sm mx-auto font-medium text-sm leading-relaxed">
-              Please select at least <strong>one report</strong> from the dataset selector above to view health fluctuations.
-            </p>
           </div>
         </div>
       );
@@ -350,12 +407,26 @@ const TrendAnalysis = () => {
 
       if (tests.length === 0) {
         return (
-          <div className="bg-slate-50 rounded-[3rem] p-4 lg:p-6 border border-slate-100/50 shadow-inner">
-            <div className="bg-white rounded-[2.5rem] p-12 text-center shadow-xl border border-slate-100 transition-all">
-              <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+          <div className="bg-slate-50/50 rounded-[2rem] sm:rounded-[3rem] p-2 sm:p-4 lg:p-6 border border-slate-200/50 shadow-inner">
+            <div className="bg-white rounded-[1.5rem] sm:rounded-[2.5rem] p-6 lg:p-10 text-center shadow-2xl border border-slate-200 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full translate-x-1/2 -translate-y-1/2 group-hover:scale-110 transition-transform duration-700"></div>
+
+              <div className="relative z-10 max-w-lg mx-auto">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-slate-900/40 group-hover:rotate-12 transition-transform duration-500">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+
+                <h2 className="text-base sm:text-3xl font-black text-slate-800 uppercase tracking-tighter mb-4 flex flex-col gap-1 sm:gap-2">
+                  <span>No Numeric Data</span>
+                  <span className="text-blue-600">For Trends</span>
+                </h2>
+
+                <p className="text-slate-500 font-medium text-xs sm:text-sm leading-relaxed mb-8">
+                  No longitudinal numeric data found for parameters in this report. Try selecting multiple reports or parameters with valid numeric values to visualize trends.
+                </p>
               </div>
-              <p className="text-slate-500 font-bold text-sm">No numeric test data found in this report</p>
             </div>
           </div>
         );
@@ -402,12 +473,12 @@ const TrendAnalysis = () => {
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Parameters</p>
               <p className="text-3xl font-black text-blue-600">{tests.length}</p>
             </div>
-            <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
+            <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</p>
-              <div className="flex items-center gap-2 mt-1">
-                {normalCount > 0 && <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{normalCount} Normal</span>}
-                {highCount > 0 && <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-full">{highCount} High</span>}
-                {lowCount > 0 && <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{lowCount} Low</span>}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 mt-1">
+                {normalCount > 0 && <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full w-fit"> {normalCount} Normal</span>}
+                {highCount > 0 && <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-full w-fit"> {highCount} High</span>}
+                {lowCount > 0 && <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full w-fit"> {lowCount} Low</span>}
               </div>
             </div>
           </div>
@@ -605,25 +676,106 @@ const TrendAnalysis = () => {
     return (
       <div className="space-y-8 animate-in slide-in-from-bottom duration-500">
         {/* ── Summary chips ──────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reports Selected</p>
-            <p className="text-3xl font-black text-slate-800">{selectedReports.length}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 w-full">
+          {/* REPORTS SELECTED */}
+          <div className="group relative bg-white/80 backdrop-blur-3xl rounded-[2rem] p-4 border border-slate-200 shadow-xl shadow-slate-900/5 hover:shadow-cyan-500/10 hover:-translate-y-1 transition-all duration-500 overflow-hidden w-full h-full flex flex-col justify-between">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-cyan-100/50 group-hover:rotate-12 transition-transform duration-500">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-cyan-50 rounded-lg flex items-center justify-center border border-cyan-100">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[9px] sm:text-[11px] font-black text-cyan-600 italic uppercase tracking-widest leading-none">Reports Selected</p>
+                </div>
+              </div>
+              <div className="mt-3 sm:mt-4 flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-2xl sm:text-4xl font-black text-sky-600 tracking-tighter group-hover:scale-105 transition-transform duration-500 origin-bottom-left">
+                  {selectedReports.length}
+                </span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Files</span>
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 to-cyan-600 opacity-100 transition-opacity"></div>
           </div>
-          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Parameters</p>
-            <p className="text-3xl font-black text-blue-600">{allParams.length}</p>
+
+          {/* PARAMETERS */}
+          <div className="group relative bg-white/80 backdrop-blur-3xl rounded-[2rem] p-4 border border-slate-200 shadow-xl shadow-slate-900/5 hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-500 overflow-hidden w-full h-full flex flex-col justify-between">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-emerald-100/50 group-hover:rotate-12 transition-transform duration-500">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-emerald-50 rounded-lg flex items-center justify-center border border-emerald-100">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[9px] sm:text-[11px] font-black text-emerald-600 italic uppercase tracking-widest leading-none">Parameters</p>
+                </div>
+              </div>
+              <div className="mt-3 sm:mt-4 flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-2xl sm:text-4xl font-black text-emerald-600 tracking-tighter group-hover:scale-105 transition-transform duration-500 origin-bottom-left">
+                  {allParams.length}
+                </span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Available</span>
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600 opacity-100 transition-opacity"></div>
           </div>
-          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Date Range</p>
-            <p className="text-sm font-black text-slate-700 leading-tight mt-1">
-              {selectedReports[0]?.reportDate || '—'}<br />
-              <span className="text-slate-400">to</span> {latestReport?.reportDate || '—'}
-            </p>
+
+          {/* DATE RANGE */}
+          <div className="group relative bg-white/80 backdrop-blur-3xl rounded-[2rem] p-4 border border-slate-200 shadow-xl shadow-slate-900/5 hover:shadow-orange-500/10 hover:-translate-y-1 transition-all duration-500 overflow-hidden w-full h-full flex flex-col justify-between">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-orange-100/50 group-hover:rotate-12 transition-transform duration-500">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-50 rounded-lg flex items-center justify-center border border-orange-100">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[9px] sm:text-[11px] font-black text-orange-600 italic uppercase tracking-widest leading-none">Date Range</p>
+                </div>
+              </div>
+              <div className="mt-3 sm:mt-4 flex flex-col justify-end">
+                <p className="text-[10px] font-black text-slate-700 leading-tight">
+                  {selectedReports[0]?.reportDate || '—'}
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase">to</span>
+                  <p className="text-[10px] font-black text-slate-700 leading-tight">
+                    {latestReport?.reportDate || '—'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 to-orange-600 opacity-100 transition-opacity"></div>
           </div>
-          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-1">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data Points</p>
-            <p className="text-3xl font-black text-emerald-600">{validPoints}</p>
+
+          {/* DATA POINTS */}
+          <div className="group relative bg-white/80 backdrop-blur-3xl rounded-[2rem] p-4 border border-slate-200 shadow-xl shadow-slate-900/5 hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-500 overflow-hidden w-full h-full flex flex-col justify-between">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-indigo-100/50 group-hover:rotate-12 transition-transform duration-500">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-indigo-50 rounded-lg flex items-center justify-center border border-indigo-100">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[9px] sm:text-[11px] font-black text-indigo-600 italic uppercase tracking-widest leading-none">Data Points</p>
+                </div>
+              </div>
+              <div className="mt-3 sm:mt-4 flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-2xl sm:text-4xl font-black text-indigo-600 tracking-tighter group-hover:scale-105 transition-transform duration-500 origin-bottom-left">
+                  {validPoints}
+                </span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Captured</span>
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-400 to-indigo-600 opacity-100 transition-opacity"></div>
           </div>
         </div>
 
@@ -634,12 +786,12 @@ const TrendAnalysis = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center shadow-lg text-white shrink-0">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-800 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg text-white shrink-0">
+                  <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight leading-tight">Health Fluctuation Profile</h2>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">
+                  <h2 className="text-lg sm:text-xl font-black text-slate-800 uppercase tracking-tight leading-tight">Health Fluctuation Profile</h2>
+                  <p className="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mt-1">
                     Tracking <span className="text-blue-600">{selectedReports.length}</span> reports · {selectedReports[0]?.reportDate} → {latestReport?.reportDate}
                   </p>
                 </div>
@@ -647,22 +799,22 @@ const TrendAnalysis = () => {
 
               {/* Active param badge */}
               {activeParam && (
-                <div className="px-5 py-2.5 bg-blue-50 border-2 border-blue-200 rounded-2xl shadow-sm flex items-center gap-3 shrink-0">
-                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></div>
-                  <span className="text-[11px] font-black text-blue-800 uppercase tracking-widest leading-none">{activeParam}</span>
+                <div className="px-4 py-2 sm:px-5 sm:py-2.5 bg-blue-50 border-2 border-blue-200 rounded-xl sm:rounded-2xl shadow-sm flex items-center gap-3 shrink-0 self-start md:self-auto">
+                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-blue-500 animate-pulse"></div>
+                  <span className="text-[10px] sm:text-[11px] font-black text-blue-800 uppercase tracking-widest leading-none">{activeParam}</span>
                 </div>
               )}
             </div>
 
             {/* Param selector pills */}
             {allParams.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 mb-6 p-4 bg-slate-50/80 rounded-2xl border border-slate-100">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mr-1">Parameter:</span>
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-6 p-3 sm:p-4 bg-slate-50/80 rounded-[1.5rem] sm:rounded-2xl border border-slate-100">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mr-1 mb-1 sm:mb-0">Parameter:</span>
                 {allParams.map((param, idx) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedTrajectoryParam(param)}
-                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeParam?.toLowerCase().trim() === param.toLowerCase().trim()
+                    className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeParam?.toLowerCase().trim() === param.toLowerCase().trim()
                       ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
                       : 'bg-white text-slate-400 border-slate-200 hover:border-slate-400 hover:text-slate-600'
                       }`}
@@ -674,19 +826,19 @@ const TrendAnalysis = () => {
             )}
 
             {/* Legend */}
-            <div className="flex items-center gap-6 mb-6">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-6 mb-6">
               {refPoint && (
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-md bg-emerald-500/20 border border-emerald-500/50"></div>
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Normal Range</span>
+                  <span className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Normal Range</span>
                 </div>
               )}
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{activeParam || 'Selected Trajectory'}</span>
+                <span className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">{activeParam || 'Selected Trajectory'}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{validPoints} / {selectedReports.length} data points</span>
+                <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{validPoints} / {selectedReports.length} data points</span>
               </div>
             </div>
 
@@ -882,92 +1034,104 @@ const TrendAnalysis = () => {
     <Layout
       title="Trend Analysis"
       headerActions={
-        <div className="flex items-center gap-3">
-          {/* View Mode Switcher */}
-          <div className="flex bg-slate-100/50 p-1 rounded-xl border border-slate-200 shadow-inner mr-2">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+          {/* Professional Segmented Toggle - Ultra Upscaled */}
+          <div className="flex bg-slate-100/90 backdrop-blur-md p-1 rounded-[1rem] sm:rounded-[1.25rem] border border-slate-200 shadow-inner overflow-hidden relative w-36 sm:w-60 h-10 sm:h-14">
+            <div
+              className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-[0.75rem] sm:rounded-[1rem] shadow-sm transition-all duration-300 ease-out z-0 ${viewMode === 'trends' ? 'translate-x-full ml-1' : 'translate-x-0 ml-1'}`}
+            ></div>
             <button
               onClick={() => setViewMode('single')}
-              className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'single' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`flex-1 relative z-10 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors duration-300 ${viewMode === 'single' ? 'text-slate-900' : 'text-slate-400'}`}
             >
               Analysis
             </button>
             <button
               onClick={() => setViewMode('trends')}
-              className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'trends' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`flex-1 relative z-10 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors duration-300 ${viewMode === 'trends' ? 'text-slate-900' : 'text-slate-400'}`}
             >
-              Fluctuations
+              Trends
             </button>
           </div>
 
-          {/* Multi-report Selector */}
+          {/* Extended Multi-report Selector - Ultra Upscaled */}
           <div className="relative">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-4 rounded-xl font-bold text-xs shadow-sm flex items-center justify-between gap-3 min-w-[140px] max-w-[160px] sm:max-w-[280px] hover:border-slate-300 transition-all"
+              className="bg-white border-2 border-slate-200 text-slate-800 h-10 sm:h-14 px-3 sm:px-8 rounded-[1rem] sm:rounded-[1.25rem] font-bold text-xs sm:text-base shadow-sm flex items-center justify-between gap-2 sm:gap-4 min-w-[120px] sm:min-w-[280px] max-w-[160px] sm:max-w-[420px] hover:border-slate-400 transition-all active:scale-95"
             >
               <span className="truncate flex-1 text-left">
                 {selectedReports.length === 1
                   ? selectedReports[0].displayName
                   : `${selectedReports.length} Selected`}
               </span>
-              <svg className={`w-3.5 h-3.5 transition-transform shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+              <svg className={`w-3 h-3 sm:w-5 sm:h-5 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
 
-            {isDropdownOpen && (() => {
-              return (
-                <div className="absolute right-0 z-[40] w-80 mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-right">
-                  {/* Report list */}
-                  <div className="max-h-56 overflow-y-auto py-1">
+            {isDropdownOpen && (
+              <>
+                {/* Invisible backdrop to capture clicks - same as CustomSelect */}
+                <div
+                  className="fixed inset-0 z-[80]"
+                  onClick={() => setIsDropdownOpen(false)}
+                />
+
+                <div className="absolute top-full right-0 z-[90] mt-2 w-72 sm:w-80 overflow-hidden bg-white rounded-2xl border border-slate-100 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)]">
+                  <div className="max-h-[320px] overflow-y-auto py-2">
                     {extractedMedicalData.map(report => {
                       const isSelected = selectedReports.some(sr => sr.id === report.id);
                       return (
-                        <div
+                        <button
                           key={report.id}
+                          type="button"
                           onClick={() => toggleReportSelection(report)}
-                          className={`px-4 py-2.5 flex items-center gap-3 cursor-pointer group transition-colors ${isSelected ? 'bg-cyan-50/60 hover:bg-cyan-50' : 'hover:bg-slate-50'
-                            } ${viewMode === 'single' && isSelected ? 'border-r-4 border-cyan-600' : ''}`}
+                          className={`w-full px-5 py-3 text-left flex items-center justify-between group transition-colors ${isSelected ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}`}
                         >
-                          {viewMode === 'trends' && (
-                            <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all shrink-0 ${isSelected ? 'bg-cyan-600 border-cyan-600' : 'border-gray-300 group-hover:border-cyan-400'}`}>
-                              {isSelected && (
-                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </div>
-                          )}
                           <div className="min-w-0 flex-1">
-                            <p className={`text-[11px] font-bold truncate ${isSelected ? 'text-slate-800' : 'text-slate-500'}`}>{report.reportName}</p>
+                            <p className={`text-sm font-medium truncate ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>
+                              {report.reportName}
+                            </p>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{report.reportDate}</p>
-                              <span className="text-[8px] font-bold text-cyan-600 bg-cyan-50 px-1.5 py-0.5 rounded-md border border-cyan-100 uppercase tracking-wider">{report.category}</span>
+                              <span className="text-[9px] font-black text-slate-400 tracking-widest uppercase">{report.reportDate}</span>
+                              <span className="text-[8px] font-bold text-indigo-500 bg-indigo-50/50 px-1.5 py-0.5 rounded-md border border-indigo-100/30 uppercase tracking-wider">{report.category}</span>
                             </div>
                           </div>
-                        </div>
+
+                          {isSelected && (
+                            <div className="ml-3 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0">
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                        </button>
                       );
                     })}
                   </div>
-                  <div className="p-2 border-t border-slate-50 bg-slate-50 flex justify-between items-center">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2">
-                      {selectedReports.length} selected
-                    </span>
-                    <button
-                      onClick={() => setIsDropdownOpen(false)}
-                      className="px-4 py-1.5 bg-slate-800 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
-                    >
-                      Done
-                    </button>
-                  </div>
+
+                  {viewMode === 'trends' && (
+                    <div className="p-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2">
+                        {selectedReports.length} Selection
+                      </span>
+                      <button
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-700"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  )}
                 </div>
-              );
-            })()}
+              </>
+            )}
           </div>
         </div>
       }
     >
-      <div className="max-w-7xl mx-auto pb-24 space-y-12">
+      <div className="w-full pb-24 space-y-8 transition-all">
 
 
         {/* Dynamic Content Area */}
