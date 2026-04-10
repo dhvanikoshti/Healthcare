@@ -365,11 +365,11 @@ const Layout = ({ children, title, titleBadge, headerActions }) => {
 
       <main className={`pt-[60px] transition-all duration-300 ${mainMargin}`} style={{ backgroundColor: 'white' }}>
         {title && (
-          <div className="bg-slate-100/100 border-b border-slate-200/80 pt-10 sm:pt-10 pb-1 sm:pb-5 px-6 sm:px-8 lg:px-10 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
-            <div className="flex items-center justify-between w-full md:w-auto gap-3 sm:gap-4 min-w-0">
+          <div className="bg-slate-100/100 border-b border-slate-200/80 pt-10 sm:pt-10 pb-1 sm:pb-5 px-4 sm:px-8 lg:px-10 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
+            <div className="flex items-center justify-between w-full md:flex-1 gap-3 sm:gap-4 min-w-0">
               <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                 <div className="h-6 w-1 bg-blue-600 rounded-full shrink-0"></div>
-                <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight leading-none truncate max-w-[150px] sm:max-w-[300px] md:max-w-none">{title}</h1>
+                <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight leading-none">{title}</h1>
               </div>
               {titleBadge}
             </div>
@@ -378,7 +378,7 @@ const Layout = ({ children, title, titleBadge, headerActions }) => {
             </div>
           </div>
         )}
-        <div className="p-4 sm:p-6 lg:p-6" style={{ backgroundColor: 'white' }}>
+        <div className="p-4 sm:p-6 lg:p-6 w-full overflow-hidden" style={{ backgroundColor: 'white' }}>
           {children}
         </div>
       </main>
