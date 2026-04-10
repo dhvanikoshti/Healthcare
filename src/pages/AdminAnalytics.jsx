@@ -376,8 +376,8 @@ const AdminAnalytics = () => {
           ) : filteredRiskData.length > 0 ? (
             <>
               {/* Interactive Pie Chart */}
-              <div className="relative">
-                <div className="h-64 md:h-72">
+              <div>
+                <div className="relative h-64 md:h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -410,12 +410,16 @@ const AdminAnalytics = () => {
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                </div>
 
-                {/* Center Label */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                  <p className="text-3xl font-bold text-gray-800">{filteredRiskData.length}</p>
-                  <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Categories</p>
+                  {/* Center Label - Stylized matching the image */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none flex flex-col items-center justify-center">
+                    <div className="leading-tight">
+                      <p className="text-4xl font-extrabold text-gray-900 drop-shadow-sm">{filteredRiskData.length}</p>
+                      <div className="mt-1 px-3 py-1 bg-[#263B6A] rounded-full shadow-sm border border-blue-900/10">
+                        <p className="text-[10px] text-white font-black uppercase tracking-[0.15em]">Category</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Legend */}

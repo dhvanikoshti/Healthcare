@@ -300,7 +300,7 @@ const AdminSettings = () => {
 
   return (
     <AdminLayout
-      title="Platform Settings"
+      title="My Profile"
       subtitle="Manage application configuration and integrations"
     >
 
@@ -381,25 +381,25 @@ const AdminSettings = () => {
                 {/* Full Name */}
                 <div className="bg-white p-1">
                   <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide"><svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>Full Name</label>
-                  {isEditing ? <input type="text" name="name" value={userData.name} onChange={handleChange} className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:bg-white object-contain block" /> : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.name || 'Not set'}</p>}
+                  {isEditing ? <input type="text" name="name" value={userData.name} onChange={handleChange} className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:bg-white object-contain block" /> : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-200">{userData.name || 'Not set'}</p>}
                 </div>
 
                 {/* Email Address */}
                 <div className="bg-white p-1">
                   <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide"><svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>Email Address</label>
-                  {isEditing ? <input type="email" name="email" value={userData.email} onChange={handleChange} disabled className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:bg-white object-contain block" /> : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.email || 'Not set'}</p>}
+                  {isEditing ? <input type="email" name="email" value={userData.email} onChange={handleChange} disabled className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:bg-white object-contain block" /> : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-200">{userData.email || 'Not set'}</p>}
                 </div>
 
                 {/* Contact Number */}
                 <div className="bg-white p-1">
                   <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide"><svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>Contact Number</label>
-                  {isEditing ? <input type="tel" name="contactNumber" value={userData.contactNumber} onChange={handleChange} className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:bg-white object-contain block" /> : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.contactNumber || 'Not set'}</p>}
+                  {isEditing ? <input type="tel" name="contactNumber" value={userData.contactNumber} onChange={handleChange} className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:bg-white object-contain block" /> : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-200">{userData.contactNumber || 'Not set'}</p>}
                 </div>
 
                 {/* Date of Birth */}
                 <div className="bg-white p-1">
                   <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide"><svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>Date of Birth</label>
-                  {isEditing ? <input type="date" name="dob" value={userData.dob} onChange={handleChange} className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:bg-white object-contain block" /> : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.dob || 'Not set'}</p>}
+                  {isEditing ? <input type="date" name="dob" value={userData.dob} onChange={handleChange} className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:bg-white object-contain block" /> : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-200">{userData.dob || 'Not set'}</p>}
                 </div>
 
                 {/* Gender */}
@@ -412,7 +412,7 @@ const AdminSettings = () => {
                       onChange={(val) => setUserData(prev => ({ ...prev, gender: val }))}
                       placeholder="Select gender"
                     />
-                  ) : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.gender || 'Not set'}</p>}
+                  ) : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-200">{userData.gender || 'Not set'}</p>}
                 </div>
 
                 {/* Blood Group */}
@@ -425,7 +425,7 @@ const AdminSettings = () => {
                       onChange={(val) => setUserData(prev => ({ ...prev, bloodGroup: val }))}
                       placeholder="Select blood group"
                     />
-                  ) : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-100">{userData.bloodGroup || 'Not set'}</p>}
+                  ) : <p className="text-gray-900 font-medium px-4 py-3 bg-white rounded-xl border border-gray-200">{userData.bloodGroup || 'Not set'}</p>}
                 </div>
               </div>
             </div>

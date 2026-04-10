@@ -290,10 +290,10 @@ const AdminDashboard = () => {
       subtitle="Welcome back! Here is your platform overview."
     >
       <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
           {/* Column 1: Total Users */}
-          <div className="flex flex-col">
-            <div className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">
+          <div className="flex flex-col h-full">
+            <div className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between h-full min-h-[120px]">
               <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none" style={{ backgroundColor: '#2563EB' }}></div>
               <div className="relative z-10 flex items-start justify-between">
                 <div className="p-3 rounded-xl shadow-sm border border-white/50 group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor: '#EFF6FF', color: '#2563EB' }}>
@@ -313,8 +313,8 @@ const AdminDashboard = () => {
           </div>
 
           {/* Column 2: Monthly Registration */}
-          <div className="flex flex-col">
-            <div className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">
+          <div className="flex flex-col h-full">
+            <div className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between h-full min-h-[120px]">
               <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none" style={{ backgroundColor: '#8B5CF6' }}></div>
               <div className="relative z-10 flex items-start justify-between">
                 <div className="p-3 rounded-xl shadow-sm border border-white/50 group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor: '#F5F3FF', color: '#8B5CF6' }}>
@@ -334,8 +334,8 @@ const AdminDashboard = () => {
           </div>
 
           {/* Column 3: Active Users */}
-          <div className="flex flex-col">
-            <div className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">
+          <div className="flex flex-col h-full">
+            <div className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between h-full min-h-[120px]">
               <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none" style={{ backgroundColor: '#10B981' }}></div>
               <div className="relative z-10 flex items-start justify-between">
                 <div className="p-3 rounded-xl shadow-sm border border-white/50 group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor: '#ECFDF5', color: '#10B981' }}>
@@ -355,8 +355,8 @@ const AdminDashboard = () => {
           </div>
 
           {/* Column 4: Inactive Users */}
-          <div className="flex flex-col">
-            <div className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between min-h-[120px]">
+          <div className="flex flex-col h-full">
+            <div className="premium-card relative p-4 lg:p-5 cursor-pointer group overflow-hidden flex flex-col justify-between h-full min-h-[120px]">
               <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none" style={{ backgroundColor: '#946161ff' }}></div>
               <div className="relative z-10 flex items-start justify-between">
                 <div className="p-3 rounded-xl shadow-sm border border-white/50 group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor: '#FEF2F2', color: '#946161ff' }}>
@@ -377,7 +377,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* --- ENHANCED AI DIAGNOSTIC HEALTH (Positioned below the cards row) --- */}
-        <div className="premium-card relative p-6 lg:p-8 border-slate-200/60 bg-white/50 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-700 overflow-hidden group">
+        <div className="premium-card relative p-4 md:p-6 lg:p-8 border-slate-200/60 bg-white/50 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-700 overflow-hidden group">
           {/* Subtle background decoration */}
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-cyan-100/20 rounded-full blur-3xl group-hover:bg-cyan-100/30 transition-colors duration-700"></div>
           <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-100/20 rounded-full blur-3xl group-hover:bg-indigo-100/30 transition-colors duration-700"></div>
@@ -385,39 +385,38 @@ const AdminDashboard = () => {
           <div className="relative z-10">
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-cyan-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:rotate-6 transition-transform duration-500">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-cyan-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:rotate-6 transition-transform duration-500">
+                  <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                 </div>
                 <div>
-                  <h3 className="text-2xl font-Arial font-bold text-slate-700">AI Performance Monitor</h3>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1.5">Automated Intelligence Pipeline Integrity</p>
+                  <h3 className="text-xl md:text-2xl font-Arial font-bold text-slate-700">AI Performance Monitor</h3>
+                  <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-[0.1em] md:tracking-[0.2em] mt-1 md:mt-1.5 line-clamp-1 md:line-clamp-none">Automated Intelligence Pipeline Integrity</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 border border-slate-100 rounded-full">
-                <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${stats.reliabilityScore > 90 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`}></div>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{stats.reliabilityScore > 80 ? 'System Optimal' : 'Degraded Performance'}</span>
+              <div className="flex items-center self-start md:self-auto gap-3 px-3 md:px-4 py-1.5 md:py-2 bg-slate-50 border border-slate-100 rounded-full">
+                <div className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full animate-pulse ${stats.reliabilityScore > 90 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`}></div>
+                <span className="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">{stats.reliabilityScore > 80 ? 'System Optimal' : 'Degraded Performance'}</span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               {/* Left Column: Reliability Gauge */}
               <div className="lg:col-span-4 flex flex-col items-center justify-center p-6 bg-slate-50/50 rounded-[2rem] border border-slate-100 shadow-inner">
-                <div className="w-32 h-32 lg:w-40 lg:h-40 relative flex items-center justify-center">
+                <div className="w-28 h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 relative flex items-center justify-center">
                   <svg className="w-full h-full -rotate-90">
-                    <circle cx="50%" cy="50%" r="42%" className="stroke-slate-200/50 fill-none" strokeWidth="12" />
+                    <circle cx="50%" cy="50%" r="42%" className="stroke-slate-200/50 fill-none stroke-[10] md:stroke-[12]" />
                     <circle
                       cx="50%" cy="50%" r="42%"
-                      className={`${stats.reliabilityScore > 80 ? 'stroke-cyan-500' : 'stroke-amber-500'} fill-none transition-all duration-1000 ease-out`}
-                      strokeWidth="12"
+                      className={`${stats.reliabilityScore > 80 ? 'stroke-cyan-500' : 'stroke-amber-500'} fill-none transition-all duration-1000 ease-out stroke-[10] md:stroke-[12]`}
                       strokeDasharray="264"
                       strokeDashoffset={264 - (264 * stats.reliabilityScore) / 100}
                       strokeLinecap="round"
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl lg:text-5xl font-black text-slate-800 tracking-tighter tabular-nums">{stats.reliabilityScore}<span className="text-xl lg:text-3xl">%</span></span>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none mt-2">Stability</span>
+                    <span className="text-2xl md:text-3xl lg:text-5xl font-black text-slate-800 tracking-tighter tabular-nums">{stats.reliabilityScore}<span className="text-lg md:text-xl lg:text-3xl">%</span></span>
+                    <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.3em] leading-none mt-1 md:mt-2">Stability</span>
                   </div>
                 </div>
                 <div className="mt-6 text-center">
@@ -432,65 +431,65 @@ const AdminDashboard = () => {
               {/* Right Column: Mini Cards & Audit Logs */}
               <div className="lg:col-span-8 space-y-6">
                 {/* 2 Success/Failed Inner Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 uppercase tracking-tight">
-                  <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-100/50 shadow-sm transition-transform hover:-translate-y-1 duration-300">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-600">
-                        <svg className="w-6 h-6 shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 uppercase tracking-tight">
+                  <div className="p-5 md:p-6 rounded-3xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-100/50 shadow-sm transition-transform hover:-translate-y-1 duration-300">
+                    <div className="flex items-center justify-between mb-3 md:mb-4">
+                      <div className="w-9 h-9 md:w-10 md:h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-600">
+                        <svg className="w-5 h-5 md:w-6 md:h-6 shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                       </div>
-                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-md text-[9px] font-black tracking-widest">Optimal</span>
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-md text-[8px] md:text-[9px] font-black tracking-widest">Optimal</span>
                     </div>
-                    <p className="text-4xl font-black text-slate-800 tabular-nums leading-none mb-1">{stats.successfulReports}</p>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Successful Executions</p>
+                    <p className="text-3xl md:text-4xl font-black text-slate-800 tabular-nums leading-none mb-1">{stats.successfulReports}</p>
+                    <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">Successful Executions</p>
                   </div>
 
-                  <div className="p-6 rounded-3xl bg-gradient-to-br from-rose-50 to-white border border-rose-100/50 shadow-sm transition-transform hover:-translate-y-1 duration-300">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-10 h-10 bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-600">
-                        <svg className="w-6 h-6 shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  <div className="p-5 md:p-6 rounded-3xl bg-gradient-to-br from-rose-50 to-white border border-rose-100/50 shadow-sm transition-transform hover:-translate-y-1 duration-300">
+                    <div className="flex items-center justify-between mb-3 md:mb-4">
+                      <div className="w-9 h-9 md:w-10 md:h-10 bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-600">
+                        <svg className="w-5 h-5 md:w-6 md:h-6 shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                       </div>
-                      <span className={`px-2 py-0.5 ${stats.failedReports > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'} rounded-md text-[9px] font-black tracking-widest uppercase`}>{stats.failedReports > 0 ? 'Alert' : 'Stable'}</span>
+                      <span className={`px-2 py-0.5 ${stats.failedReports > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'} rounded-md text-[8px] md:text-[9px] font-black tracking-widest uppercase`}>{stats.failedReports > 0 ? 'Alert' : 'Stable'}</span>
                     </div>
-                    <p className={`text-4xl font-black tabular-nums leading-none mb-1 ${stats.failedReports > 0 ? 'text-rose-600' : 'text-slate-400'}`}>{stats.failedReports}</p>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Processing Incidents</p>
+                    <p className={`text-3xl md:text-4xl font-black tabular-nums leading-none mb-1 ${stats.failedReports > 0 ? 'text-rose-600' : 'text-slate-400'}`}>{stats.failedReports}</p>
+                    <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">Processing Incidents</p>
                   </div>
                 </div>
 
                 {/* Audit Breakthrough / Reasons */}
                 <div className="bg-slate-50/80 rounded-3xl p-6 border border-slate-100">
-                  <div className="flex items-center justify-between mb-6">
-                    <h4 className="text-[15px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <h4 className="text-[13px] sm:text-[15px] font-black text-slate-700 uppercase tracking-widest flex flex-wrap items-center gap-2">
                       Processing Reason Audit
-                      <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                      <span className="text-[11px] text-slate-400 lowercase font-bold tracking-normal italic font-serif">Deep Extraction analysis</span>
+                      <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300"></span>
+                      <span className="text-[10px] sm:text-[11px] text-slate-400 lowercase font-bold tracking-normal italic font-serif">Deep Extraction analysis</span>
                     </h4>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[14px] font-bold text-slate-400 uppercase tracking-widest">Stability Profile:</span>
-                      <span className={`text-[14px] font-black uppercase ${stats.reliabilityScore > 85 ? 'text-emerald-500' : 'text-amber-500'}`}>{stats.reliabilityScore > 85 ? 'A+' : 'Check Config'}</span>
+                    <div className="flex items-center gap-2 bg-slate-100/50 sm:bg-transparent px-3 py-2 sm:p-0 rounded-xl">
+                      <span className="text-[12px] sm:text-[14px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Stability Profile:</span>
+                      <span className={`text-[12px] sm:text-[14px] font-black uppercase ${stats.reliabilityScore > 85 ? 'text-emerald-500' : 'text-amber-500'}`}>{stats.reliabilityScore > 85 ? 'A+' : 'Check Config'}</span>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-                    <div className="flex items-center justify-between p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-                      <div className="flex items-center gap-4">
-                        <div className="w-2 h-12 bg-rose-400 rounded-full"></div>
+                    <div className="flex items-center justify-between p-3.5 sm:p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-1.5 sm:w-2 h-10 sm:h-12 bg-rose-400 rounded-full"></div>
                         <div>
-                          <p className="text-sm font-bold text-slate-700 uppercase tracking-tight">Missing AI Signal</p>
-                          <p className="text-[10px] font-bold text-slate-400 leading-none mt-1.5 uppercase">n8n payload empty</p>
+                          <p className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-tight">Missing AI Signal</p>
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 leading-none mt-1 sm:mt-1.5 uppercase">n8n payload empty</p>
                         </div>
                       </div>
-                      <span className="text-xl font-black text-slate-800 tabular-nums">{stats.failureReasons.missingAnalysis}</span>
+                      <span className="text-lg sm:text-xl font-black text-slate-800 tabular-nums">{stats.failureReasons.missingAnalysis}</span>
                     </div>
 
-                    <div className="flex items-center justify-between p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-                      <div className="flex items-center gap-4">
-                        <div className="w-2 h-12 bg-amber-400 rounded-full"></div>
+                    <div className="flex items-center justify-between p-3.5 sm:p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-1.5 sm:w-2 h-10 sm:h-12 bg-amber-400 rounded-full"></div>
                         <div>
-                          <p className="text-sm font-bold text-slate-700 uppercase tracking-tight">Partial Extraction</p>
-                          <p className="text-[10px] font-bold text-slate-400 leading-none mt-1.5 uppercase">Schema mismatch</p>
+                          <p className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-tight">Partial Extraction</p>
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 leading-none mt-1 sm:mt-1.5 uppercase">Schema mismatch</p>
                         </div>
                       </div>
-                      <span className="text-xl font-black text-slate-800 tabular-nums">{stats.failureReasons.incompleteResults}</span>
+                      <span className="text-lg sm:text-xl font-black text-slate-800 tabular-nums">{stats.failureReasons.incompleteResults}</span>
                     </div>
                   </div>
 
@@ -517,40 +516,49 @@ const AdminDashboard = () => {
                 <p className="text-sm text-gray-500">{mode === 'all' ? `Yearly totals comparison (${years.join(', ')})` : mode === 'compare' ? `Comparing ${year1} vs ${year2}` : `Monthly registrations in ${year1}`}</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-              <div className="flex bg-white rounded-xl p-0.5 sm:p-1 shadow-sm border border-gray-200 shrink-0">
-                <button onClick={() => setMode('single')} className={`px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'single' ? 'bg-[#547792] text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Single</button>
-                <button onClick={() => setMode('compare')} className={`px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'compare' ? 'bg-white text-[#547792] shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>Compare</button>
-                <button onClick={() => setMode('all')} className={`px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'all' ? 'bg-white text-[#547792] shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>All</button>
+            <div className="flex flex-nowrap items-center gap-1.5 sm:gap-3 shrink-0 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 hide-scrollbar">
+              <div className="flex bg-white rounded-xl p-0.5 shadow-sm border border-gray-200 shrink-0">
+                <button onClick={() => setMode('single')} className={`px-2 sm:px-4 py-1 sm:py-2 text-[9px] sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'single' ? 'bg-[#547792] text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Single</button>
+                <button onClick={() => setMode('compare')} className={`px-2 sm:px-4 py-1 sm:py-2 text-[9px] sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'compare' ? 'bg-[#547792] text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Compare</button>
+                <button onClick={() => setMode('all')} className={`px-2 sm:px-4 py-1 sm:py-2 text-[9px] sm:text-sm font-semibold rounded-lg transition-all duration-200 ${mode === 'all' ? 'bg-[#547792] text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>All</button>
               </div>
 
               {mode === 'single' && (
-                <CustomSelect
-                  options={years.map(y => ({ label: y.toString(), value: y }))}
+                <select
                   value={year1}
-                  onChange={(val) => setYear1(val)}
-                  placeholder="Year"
-                  className="w-20 sm:w-32 shrink-0"
-                />
+                  onChange={(e) => setYear1(Number(e.target.value))}
+                  className="shrink-0 appearance-none text-[10px] sm:text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg px-1.5 py-1 sm:py-1.5 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#547792]/40 focus:border-[#547792]"
+                  style={{ width: '56px' }}
+                >
+                  {years.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
               )}
 
               {mode === 'compare' && (
                 <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                  <CustomSelect
-                    options={years.map(y => ({ label: y.toString(), value: y }))}
+                  <select
                     value={year1}
-                    onChange={(val) => setYear1(val)}
-                    placeholder="Year"
-                    className="w-20 sm:w-32"
-                  />
+                    onChange={(e) => setYear1(Number(e.target.value))}
+                    className="shrink-0 appearance-none text-[10px] sm:text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg px-1.5 py-1 sm:py-1.5 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#547792]/40 focus:border-[#547792]"
+                    style={{ width: '56px' }}
+                  >
+                    {years.map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
                   <span className="text-gray-400 font-bold text-[9px] sm:text-xs uppercase shrink-0">vs</span>
-                  <CustomSelect
-                    options={years.map(y => ({ label: y.toString(), value: y }))}
+                  <select
                     value={year2}
-                    onChange={(val) => setYear2(val)}
-                    placeholder="Year"
-                    className="w-20 sm:w-32"
-                  />
+                    onChange={(e) => setYear2(Number(e.target.value))}
+                    className="shrink-0 appearance-none text-[10px] sm:text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg px-1.5 py-1 sm:py-1.5 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#547792]/40 focus:border-[#547792]"
+                    style={{ width: '56px' }}
+                  >
+                    {years.map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
                 </div>
               )}
             </div>

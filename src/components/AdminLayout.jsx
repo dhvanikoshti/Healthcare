@@ -113,7 +113,6 @@ const AdminLayout = ({ children, title, subtitle, headerActions }) => {
     { name: 'System Analytics', path: '/admin/analytics', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', iconBg: '#10b981' },
     { name: 'Health Tips', path: '/admin/health-tips', icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z', iconBg: '#ec4899' },
     { name: 'My Profile', path: '/admin/settings', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', iconBg: '#64748b' },
-    { name: 'Reports', path: '/admin/reports', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', iconBg: '#f59e0b' },
   ];
 
   const sidebarWidth = sidebarCollapsed ? 'w-20' : 'w-72';
@@ -179,7 +178,6 @@ const AdminLayout = ({ children, title, subtitle, headerActions }) => {
                       )}
                       <div>
                         <p className="font-bold text-gray-800">{userData.name || 'Admin'}</p>
-                        <p className="text-sm text-gray-500">{userData.email || 'admin@healthcare.com'}</p>
                       </div>
                     </div>
                   </div>
