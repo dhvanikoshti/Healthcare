@@ -62,6 +62,7 @@ const TrendAnalysis = () => {
             category: (data.category || data.analysis?.report_category || data.analysis?.report_type || data.analysis?.category || data.analysis?.type || 'Blood Test').toString().trim(),
             medicalData: labReport,
             hasAnalysis: true,
+            mongoId: data.analysis?._id, // Extract MongoDB ID
             status: status === 'Pending' ? 'Analyzed' : status,
             overallHealth: data.analysis.overall_health || null,
             totalTests: data.analysis.total_tests || labReport.length,
@@ -316,6 +317,23 @@ const TrendAnalysis = () => {
                 <h2 className="text-xl font-black  text-blue-900 uppercase">Full Report Analysis</h2>
                 <p className="text-slate-600 text-[10px] font-bold uppercase tracking-widest mt-1">{activeReport.reportName} — {activeReport.reportDate}</p>
               </div>
+
+              {/* AI Chat Integration Icon */}
+              <Link
+                to="/chat"
+                state={{ reportId: activeReport.mongoId || activeReport.id }}
+                className="flex items-center gap-2.5 px-4 py-2 bg-gradient-to-tr from-indigo-600 to-violet-500 text-white rounded-xl shadow-lg shadow-indigo-100 hover:shadow-indigo-200 hover:scale-105 active:scale-95 transition-all group"
+              >
+                <div className="relative">
+                  <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
+                  <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-cyan-400 rounded-full animate-pulse border-2 border-[#8b5cf6]"></div>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.15em] hidden sm:inline">Ask AI assistant</span>
+              </Link>
+
+
             </div>
             <div className="overflow-x-auto scrollbar-hide">
               {activeReport.medicalData.length > 0 ? (
@@ -797,13 +815,9 @@ const TrendAnalysis = () => {
                 </div>
               </div>
 
-              {/* Active param badge */}
-              {activeParam && (
-                <div className="px-4 py-2 sm:px-5 sm:py-2.5 bg-blue-50 border-2 border-blue-200 rounded-xl sm:rounded-2xl shadow-sm flex items-center gap-3 shrink-0 self-start md:self-auto">
-                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-blue-500 animate-pulse"></div>
-                  <span className="text-[10px] sm:text-[11px] font-black text-blue-800 uppercase tracking-widest leading-none">{activeParam}</span>
-                </div>
-              )}
+
+
+
             </div>
 
             {/* Param selector pills */}

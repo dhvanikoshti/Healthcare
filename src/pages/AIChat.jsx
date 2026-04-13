@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ReactMarkdown from 'react-markdown';
 import { db, auth } from '../firebase';
@@ -6,10 +7,12 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
 const AIChat = () => {
+  const location = useLocation();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [activeDocId, setActiveDocId] = useState(null);
   const [showClearModal, setShowClearModal] = useState(false);
 
   const messagesEndRef = useRef(null);
@@ -42,12 +45,23 @@ const AIChat = () => {
 
       try {
         const snapshot = await getDocs(q);
-        const history = snapshot.docs.map(doc => ({
-          id: doc.id,
-          type: doc.data().type,
-          text: doc.data().text,
-          time: doc.data().time
-        }));
+        const history = snapshot.docs.flatMap(docSnap => {
+          const data = docSnap.data();
+          // Support new unified format (one doc = two balloons)
+          if (data.message && data.aiResponse) {
+            return [
+              { id: `${docSnap.id}-u`, type: 'user', text: data.message, time: data.time || 'now' },
+              { id: `${docSnap.id}-a`, type: 'ai', text: data.aiResponse, time: data.time || 'now' }
+            ];
+          }
+          // Support old format for compatibility
+          return [{
+            id: docSnap.id,
+            type: data.type,
+            text: data.text,
+            time: data.time
+          }];
+        });
 
         // If there's history, load it. If not, set a default welcome message.
         if (history.length > 0) {
@@ -73,11 +87,27 @@ const AIChat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // 3. Handle sending a message
-  const handleSend = async () => {
-    if (!inputText.trim() || !currentUser) return;
+  // 4. Handle initial report context passing
+  useEffect(() => {
+    if (location.state?.reportId && currentUser && messages.length > 0) {
+      // Set the active report context without triggering an auto-message
+      setActiveDocId(location.state.reportId);
 
-    const userText = inputText;
+      // Clear the navigation state
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, currentUser, !!messages.length]);
+
+  // 3. Handle sending a message
+  const handleSend = async (customText = null, docContext = false, docId = null) => {
+    // If we have an active doc context and no specific docId is passed, use the active one
+    const effectiveDocId = docId || activeDocId;
+    const effectiveDocContext = docContext || !!effectiveDocId;
+
+    const textToSend = customText || inputText;
+    if (!textToSend.trim() || !currentUser) return;
+
+    const userText = textToSend;
     const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const userMessage = {
@@ -93,24 +123,31 @@ const AIChat = () => {
     setIsTyping(true);
 
     try {
-      // Save User Message to Firebase
+      // We now save user and ai response together AFTER the response arrives
+      // to match the requested MongoDB structure.
+      /*
       await addDoc(collection(db, 'users', currentUser.uid, 'chats'), {
         type: 'user',
         text: userText,
+        docId: effectiveDocId,
         time: timeNow,
         timestamp: serverTimestamp()
       });
+      */
 
       // Send to n8n Webhook
-      const webhookUrl = 'http://localhost:5678/webhook/healthchat'; // Change to /webhook/ in production
+      const webhookUrl = 'http://localhost:5678/webhook/AIChatBot'; // Change to /webhook/ in production
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sessionId: currentUser.uid, // Uses Firebase UID for permanent n8n memory
-          chatInput: userText
+          userId: currentUser.uid,
+          sessionId: currentUser.uid,
+          message: userText,
+          docContext: effectiveDocContext,
+          ...(effectiveDocId && { docId: effectiveDocId })
         }),
       });
 
@@ -118,8 +155,9 @@ const AIChat = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      const aiResponseText = data.reply || data.output || "I couldn't process that.";
+      const responseData = await response.json();
+      const data = Array.isArray(responseData) ? responseData[0] : responseData;
+      const aiResponseText = data.aiResponse || data.reply || data.output || "I couldn't process that.";
       const aiTimeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const aiResponse = {
@@ -132,10 +170,11 @@ const AIChat = () => {
       // Add Bot Message to UI
       setMessages((prev) => [...prev, aiResponse]);
 
-      // Save Bot Message to Firebase
+      // Save Combined Interaction to Firebase (One doc for both)
       await addDoc(collection(db, 'users', currentUser.uid, 'chats'), {
-        type: 'ai',
-        text: aiResponseText,
+        message: userText,
+        aiResponse: aiResponseText,
+        docId: effectiveDocId,
         time: aiTimeNow,
         timestamp: serverTimestamp()
       });
@@ -187,6 +226,7 @@ const AIChat = () => {
       text: "Hello! I'm your AI Health Assistant. How can I help you today?",
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }]);
+    setActiveDocId(null);
     setShowClearModal(false);
   };
 
@@ -209,6 +249,22 @@ const AIChat = () => {
             </svg>
             24/7 Available
           </div>
+
+          {activeDocId && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg shadow-sm text-[10px] font-black uppercase tracking-[0.15em] animate-in fade-in slide-in-from-right duration-500">
+              <span className="w-2 h-2 bg-cyan-300 rounded-full animate-pulse"></span>
+              Report Context Loaded
+              <button
+                onClick={() => setActiveDocId(null)}
+                className="ml-1 hover:text-red-300 transition-colors"
+                title="Clear Context"
+              >
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       }
     >

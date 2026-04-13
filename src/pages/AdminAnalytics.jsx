@@ -290,7 +290,7 @@ const AdminAnalytics = () => {
       </div>
 
       {/* Enhanced Risk Category Distribution - Attractive Design with Filters */}
-      <div className="bg-white rounded-2xl p-5 md:p-6 shadow-lg border border-gray-100">
+      <div className="bg-white rounded-2xl p-5 md:p-6 shadow-lg border border-gray-100 mt-8">
         {/* Header with Stats */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
           <div>
@@ -497,7 +497,7 @@ const AdminAnalytics = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-10">
         {/* User Demographics - Age Groups */}
         <div className="bg-white rounded-2xl p-5 md:p-6 shadow-lg border border-gray-100">
           <h2 className="text-xl font-bold text-gray-800 mb-6">User Demographics - Age Groups</h2>
