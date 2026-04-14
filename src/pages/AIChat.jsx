@@ -1,19 +1,23 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ReactMarkdown from 'react-markdown';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, deleteDoc, doc, getDoc, updateDoc, addDoc, serverTimestamp, writeBatch, where, setDoc } from 'firebase/firestore';
 
 const AIChat = () => {
   const location = useLocation();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(undefined); // undefined = loading, null = no user
   const [activeDocId, setActiveDocId] = useState(null);
   const [showClearModal, setShowClearModal] = useState(false);
+  const [sessions, setSessions] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -25,85 +29,163 @@ const AIChat = () => {
     'When should I schedule my next checkup?',
   ];
 
-  // 1. Get the current user
+  // ─── AUTH LISTENER ────────────────────────────────────────────────────────
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-    });
+    const unsubscribe = onAuthStateChanged(auth, u => setCurrentUser(u));
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Chat History from Firebase on Page Load
+  // ─── FETCH SESSIONS ───────────────────────────────────────────────────────
+  const fetchSessions = useCallback(async (userId) => {
+    if (!userId) return;
+    console.log("Fetching sessions from Firestore for user:", userId);
+    try {
+      const q = query(collection(db, 'users', userId, 'sessions'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      const loadedSessions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        _id: doc.id // compatibility
+      }));
+      console.log("Firestore Sessions loaded:", loadedSessions);
+      setSessions(loadedSessions);
+      return loadedSessions;
+    } catch (error) {
+      console.error("Error fetching sessions from Firestore:", error);
+      setSessions([]);
+    }
+    return [];
+  }, []);
+
+  // ─── FETCH MESSAGES ───────────────────────────────────────────────────────
+  const fetchMessages = useCallback(async (userId, sessionId) => {
+    if (!userId || !sessionId) return;
+    setIsLoadingHistory(true);
+    console.log("Fetching messages from Firestore for session:", sessionId);
+    try {
+      const q = query(
+        collection(db, 'users', userId, 'chats'), 
+        where('sessionId', '==', sessionId),
+        orderBy('timestamp', 'asc')
+      );
+      const snapshot = await getDocs(q);
+      const history = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          type: data.message ? 'user' : 'ai',
+          text: data.aiResponse || data.message || '',
+          time: data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'
+        };
+      }).flatMap(msg => {
+          // Double check if record contains both (backward compatibility)
+          // Since our handleSend saves userText and aiResponse in one 'chats' record
+          // we need to split if they are both there
+          const docData = snapshot.docs.find(d => d.id === msg.id)?.data();
+          if (docData?.message && docData?.aiResponse) {
+             return [
+               { id: msg.id + '-u', type: 'user', text: docData.message, time: msg.time },
+               { id: msg.id + '-a', type: 'ai', text: docData.aiResponse, time: msg.time }
+             ];
+          }
+          return [msg];
+      });
+
+      if (history.length > 0) {
+        setMessages(history);
+      } else {
+        setMessages([{
+          id: 'welcome-msg',
+          type: 'ai',
+          text: "Hello! I'm your AI Health Assistant. How can I help you today?",
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+      }
+    } catch (error) {
+      console.error("Error fetching messages from Firestore:", error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
+  // ─── INITIAL LOAD ─────────────────────────────────────────────────────────
   useEffect(() => {
-    const fetchChatHistory = async () => {
+    // 0. Cleanup any legacy localStorage chat data
+    const legacyKeys = ['activeChatSessionId', 'chats', 'messages', 'chatHistory'];
+    legacyKeys.forEach(key => localStorage.removeItem(key));
+
+    const initSessions = async () => {
       if (!currentUser) return;
 
-      const q = query(
-        collection(db, 'users', currentUser.uid, 'chats'),
-        orderBy('timestamp', 'asc') // Orders messages from oldest to newest
-      );
+      // 1. Fetch sessions from Firestore
+      const loadedSessions = await fetchSessions(currentUser.uid);
 
+      // 2. Fetch last active session from Firebase
       try {
-        const snapshot = await getDocs(q);
-        const history = snapshot.docs.flatMap(docSnap => {
-          const data = docSnap.data();
-          // Support new unified format (one doc = two balloons)
-          if (data.message && data.aiResponse) {
-            return [
-              { id: `${docSnap.id}-u`, type: 'user', text: data.message, time: data.time || 'now' },
-              { id: `${docSnap.id}-a`, type: 'ai', text: data.aiResponse, time: data.time || 'now' }
-            ];
-          }
-          // Support old format for compatibility
-          return [{
-            id: docSnap.id,
-            type: data.type,
-            text: data.text,
-            time: data.time
-          }];
-        });
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        const lastSessionIdFromFirebase = userSnap.exists() ? userSnap.data().lastActiveSessionId : null;
 
-        // If there's history, load it. If not, set a default welcome message.
-        if (history.length > 0) {
-          setMessages(history);
-        } else {
-          setMessages([{
-            id: 'welcome-msg',
-            type: 'ai',
-            text: "Hello! I'm your AI Health Assistant. How can I help you today?",
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }]);
+        if (lastSessionIdFromFirebase) {
+          setActiveSessionId(lastSessionIdFromFirebase);
+        } else if (loadedSessions && loadedSessions.length > 0) {
+          // Auto-select most recent if nothing in Firebase
+          const firstId = loadedSessions[0].id;
+          setActiveSessionId(firstId);
         }
       } catch (error) {
-        console.error("Error fetching chat history:", error);
+        console.error("Error loading persistence from Firebase:", error);
       }
     };
 
-    fetchChatHistory();
-  }, [currentUser]);
+    initSessions();
+  }, [currentUser, fetchSessions]);
 
-  // Scroll to bottom when messages change
+  // Save activeSessionId to Firebase whenever it changes
+  useEffect(() => {
+    const syncSessionToFirebase = async () => {
+      if (currentUser && activeSessionId) {
+        try {
+          const userRef = doc(db, 'users', currentUser.uid);
+          await updateDoc(userRef, { lastActiveSessionId: activeSessionId });
+        } catch (error) {
+          console.error("Error saving session to Firebase:", error);
+        }
+      }
+    };
+    syncSessionToFirebase();
+  }, [activeSessionId, currentUser]);
+
+  // Load active session messages
+  useEffect(() => {
+    if (currentUser && activeSessionId) {
+      fetchMessages(currentUser.uid, activeSessionId);
+    } else if (currentUser && !activeSessionId) {
+      // Reset to welcome if no session selected
+      setMessages([{
+        id: 'welcome-msg',
+        type: 'ai',
+        text: "Hello! I'm your AI Health Assistant. How can I help you today?",
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+    }
+  }, [currentUser, activeSessionId, fetchMessages]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // 4. Handle initial report context passing
+  // Handle report context from location state
   useEffect(() => {
-    if (location.state?.reportId && currentUser && messages.length > 0) {
-      // Set the active report context without triggering an auto-message
+    if (location.state?.reportId && currentUser) {
       setActiveDocId(location.state.reportId);
-
-      // Clear the navigation state
+      // Optional: if starting from a report link, we might want to start a new chat automatically
       window.history.replaceState({}, document.title);
     }
-  }, [location.state, currentUser, !!messages.length]);
+  }, [location.state, currentUser]);
 
-  // 3. Handle sending a message
-  const handleSend = async (customText = null, docContext = false, docId = null) => {
-    // If we have an active doc context and no specific docId is passed, use the active one
-    const effectiveDocId = docId || activeDocId;
-    const effectiveDocContext = docContext || !!effectiveDocId;
-
+  // ─── SEND MESSAGE ─────────────────────────────────────────────────────────
+  const handleSend = async (customText = null) => {
     const textToSend = customText || inputText;
     if (!textToSend.trim() || !currentUser) return;
 
@@ -117,109 +199,134 @@ const AIChat = () => {
       time: timeNow,
     };
 
-    // Add user message to UI immediately
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsTyping(true);
 
     try {
-      // We now save user and ai response together AFTER the response arrives
-      // to match the requested MongoDB structure.
-      /*
-      await addDoc(collection(db, 'users', currentUser.uid, 'chats'), {
-        type: 'user',
-        text: userText,
-        docId: effectiveDocId,
-        time: timeNow,
-        timestamp: serverTimestamp()
-      });
-      */
-
-      // Send to n8n Webhook
-      const webhookUrl = 'http://localhost:5678/webhook/AIChatBot'; // Change to /webhook/ in production
-      const response = await fetch(webhookUrl, {
+      const isNew = !activeSessionId;
+      const response = await fetch('http://localhost:5678/webhook/ChatBotCollection', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: currentUser.uid,
-          sessionId: currentUser.uid,
           message: userText,
-          docContext: effectiveDocContext,
-          ...(effectiveDocId && { docId: effectiveDocId })
+          isNew: isNew,
+          sessionId: activeSessionId,
+          docContext: !!activeDocId,
+          docId: activeDocId
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const text = await response.text();
+      if (!text) throw new Error("Empty response from AI engine");
+
+      const dataArr = JSON.parse(text);
+      const data = Array.isArray(dataArr) ? dataArr[0] : dataArr;
+      const aiResponseText = data.aiResponse || "I couldn't process that.";
+      const newSessionId = data.sessionId;
+
+      if (isNew && newSessionId) {
+        // Create session metadata in Firestore
+        await setDoc(doc(db, 'users', currentUser.uid, 'sessions', newSessionId), {
+          chatName: userText.substring(0, 50) + (userText.length > 50 ? '...' : ''),
+          sessionId: newSessionId,
+          createdAt: serverTimestamp()
+        });
+        setActiveSessionId(newSessionId);
+        fetchSessions(currentUser.uid);
       }
 
-      const responseData = await response.json();
-      const data = Array.isArray(responseData) ? responseData[0] : responseData;
-      const aiResponseText = data.aiResponse || data.reply || data.output || "I couldn't process that.";
-      const aiTimeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      const aiResponse = {
-        id: (Date.now() + 1).toString(),
-        type: 'ai',
-        text: aiResponseText,
-        time: aiTimeNow,
-      };
-
-      // Add Bot Message to UI
-      setMessages((prev) => [...prev, aiResponse]);
-
-      // Save Combined Interaction to Firebase (One doc for both)
-      await addDoc(collection(db, 'users', currentUser.uid, 'chats'), {
+      // ─── SAVE TO FIREBASE ──────────────────────────────────────────────
+      const docRef = await addDoc(collection(db, 'users', currentUser.uid, 'chats'), {
+        sessionId: activeSessionId || newSessionId,
         message: userText,
         aiResponse: aiResponseText,
-        docId: effectiveDocId,
-        time: aiTimeNow,
+        docId: activeDocId,
         timestamp: serverTimestamp()
       });
 
-    } catch (error) {
-      console.error("Error communicating with n8n:", error);
-      const errorMessage = {
-        id: (Date.now() + 1).toString(),
+      const aiResponse = {
+        id: docRef.id,
         type: 'ai',
-        text: 'Sorry, I am having trouble connecting to the server right now. Make sure your n8n workflow is active.',
+        text: aiResponseText,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages((prev) => [...prev, errorMessage]);
+
+      setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error("Error communicating with AI:", error);
+      setMessages(prev => [...prev, {
+        id: 'err-' + Date.now(),
+        type: 'ai',
+        text: 'Sorry, I am having trouble connecting to the medical AI engine. Please ensure your n8n workflow is active.',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }]);
     } finally {
       setIsTyping(false);
     }
   };
 
-  const handleQuickQuestion = (question) => {
-    setInputText(question);
-    inputRef.current?.focus();
-  };
+  const handleDeleteSession = async (sid) => {
+    if (!currentUser) return;
+    if (!window.confirm("Are you sure you want to permanently delete this session from your history? (It will be kept in MongoDB backup)")) return;
+    
+    try {
+      console.log("Deleting session from Firestore (UI only):", sid);
+      
+      const batch = writeBatch(db);
+      
+      // Delete all messages in 'chats' collection for this session
+      const chatsQ = query(collection(db, 'users', currentUser.uid, 'chats'), where('sessionId', '==', sid));
+      const chatsSnapshot = await getDocs(chatsQ);
+      chatsSnapshot.docs.forEach(d => batch.delete(d.ref));
 
-  const clearAllChats = () => {
-    setShowClearModal(true);
-  };
+      // Delete the session metadata record in Firebase
+      batch.delete(doc(db, 'users', currentUser.uid, 'sessions', sid));
 
-  const confirmClearChats = async () => {
-    if (currentUser) {
-      try {
-        // Delete all chat documents from Firebase for this user
-        const q = query(collection(db, 'users', currentUser.uid, 'chats'));
-        const snapshot = await getDocs(q);
-
-        // Delete each document
-        const deletePromises = snapshot.docs.map(document =>
-          deleteDoc(doc(db, 'users', currentUser.uid, 'chats', document.id))
-        );
-        await Promise.all(deletePromises);
-      } catch (error) {
-        console.error("Error clearing chats from Firebase:", error);
+      // Clear lastActive if matched
+      const userRef = doc(db, 'users', currentUser.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists() && userSnap.data().lastActiveSessionId === sid) {
+        batch.update(userRef, { lastActiveSessionId: null });
       }
-    }
 
-    // Reset UI
+      await batch.commit();
+
+      // UI state update
+      setSessions(prev => prev.filter(s => s.id !== sid));
+      if (activeSessionId === sid) {
+        setActiveSessionId(null);
+        setMessages([{
+          id: 'welcome-msg',
+          type: 'ai',
+          text: "Hello! I'm your AI Health Assistant. How can I help you today?",
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+      }
+      console.log("Session deleted from Firebase. MongoDB backup preserved.");
+    } catch (error) {
+      console.error("Error during Firebase deletion:", error);
+      alert("An error occurred while deleting from Firebase. Please ensure you are logged in.");
+    }
+  };
+
+  const handleDeleteMessage = async (mid) => {
+    if (!currentUser) return;
+    try {
+      console.log("Deleting message from Firestore (UI only):", mid);
+      await deleteDoc(doc(db, 'users', currentUser.uid, 'chats', mid));
+      setMessages(prev => prev.filter(m => m.id !== mid));
+      console.log("Message deleted from Firebase.");
+    } catch (error) {
+      console.error("Error deleting message from Firestore:", error);
+    }
+  };
+
+  const startNewChat = () => {
+    setActiveSessionId(null);
     setMessages([{
       id: 'welcome-msg',
       type: 'ai',
@@ -227,222 +334,228 @@ const AIChat = () => {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }]);
     setActiveDocId(null);
+  };
+
+  const clearAllChats = () => setShowClearModal(true);
+
+  const confirmClearChats = async () => {
+    // This could be updated to call an n8n webhook for bulk deletion if needed
+    // For now, we clear the local active session
+    startNewChat();
     setShowClearModal(false);
   };
+
+  if (currentUser === undefined) {
+    return (
+      <Layout title="Health Assistant">
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="w-16 h-16 border-4 border-cyan-100 border-t-cyan-600 rounded-full animate-spin"></div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout
       title="Health Assistant"
       headerActions={
         <div className="flex items-center gap-3">
-          <div className="hidden md:flex flex-col items-end mr-2">
-            <p className="text-[10px] font-black text-[#263B6A] uppercase tracking-widest leading-none mb-1">Your Intelligent</p>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Health Companion</p>
-          </div>
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg border border-blue-100 text-[10px] font-bold uppercase tracking-wider">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-            Online & Ready
-          </div>
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100 text-[10px] font-bold uppercase tracking-wider">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            24/7 Available
-          </div>
-
           {activeDocId && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg shadow-sm text-[10px] font-black uppercase tracking-[0.15em] animate-in fade-in slide-in-from-right duration-500">
               <span className="w-2 h-2 bg-cyan-300 rounded-full animate-pulse"></span>
               Report Context Loaded
-              <button
-                onClick={() => setActiveDocId(null)}
-                className="ml-1 hover:text-red-300 transition-colors"
-                title="Clear Context"
-              >
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
+              <button onClick={() => setActiveDocId(null)} className="ml-1 hover:text-red-300 transition-colors">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
               </button>
             </div>
           )}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
         </div>
       }
     >
-      <div className="h-[calc(100vh-160px)] flex flex-col">
-        {/* Chat Container */}
-        <div className="flex-1 bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden flex">
-          {/* Chat Area */}
-          <div className="flex-1 flex flex-col">
-            {/* Messages */}
-            <div className="flex-1 p-3 sm:p-6 overflow-y-auto space-y-4 bg-white">
-              {/* Welcome Message */}
-              {messages.length === 1 && (
-                <div className="text-center py-4 sm:py-10">
-                  <div className="w-12 h-12 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-5 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: '#263B6A' }}>
-                    <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg sm:text-xl font-bold mb-2" style={{ color: '#263B6A' }}>How can I help you today?</h3>
-                  <p className="text-gray-500 mb-4 lg:mb-6 max-w-md mx-auto text-xs sm:text-base">Ask me anything about your health reports or get personalized advice</p>
-                  <div className="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
-                    {quickQuestions.map((question, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleQuickQuestion(question)}
-                        className="px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-200 hover:shadow-md border border-gray-200"
-                        style={{ backgroundColor: '#FFFFFF', color: '#263B6A' }}
-                      >
-                        {question}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+      <div className="h-[calc(100vh-160px)] flex gap-6">
+        {/* Sidebar */}
+        <div className={`${isSidebarOpen ? 'flex' : 'hidden'} lg:flex flex-col w-72 bg-slate-50 border border-slate-100 rounded-[2rem] overflow-hidden shadow-sm`}>
+          <div className="p-4 border-b border-slate-200/60 bg-white">
+            <button
+              onClick={startNewChat}
+              className="w-full flex items-center justify-center gap-3 py-3.5 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all shadow-lg active:scale-95"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
+              New Session
+            </button>
+          </div>
 
-              {messages.map((message) => (
-                <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} group`}>
-                  <div className={`max-w-[75%] ${message.type === 'user' ? 'order-2' : 'order-1'} group-hover:bg-white/70 dark:group-hover:bg-gray-800/50 transition-colors duration-200 rounded-2xl p-2 -m-2`}>
-                    <div className={`flex items-end gap-2.5 ${message.type === 'user' ? 'flex-row-reverse' : ''}`}>
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${message.type === 'ai'
-                        ? 'shadow-md'
-                        : ''
-                        }`} style={message.type === 'ai' ? { backgroundColor: '#263B6A' } : { backgroundColor: '#547792' }}>
-                        {message.type === 'ai' ? (
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                        ) : (
-                          <span className="text-white text-xs font-bold">ME</span>
-                        )}
-                      </div>
-                      <div className={`px-4 sm:px-5 py-3 rounded-2xl shadow-sm ${message.type === 'user'
-                        ? 'text-white rounded-br-md'
-                        : 'text-gray-800 rounded-bl-md border'
-                        }`} style={message.type === 'user' ? { backgroundColor: '#547792' } : { backgroundColor: '#FFFFFF', borderColor: '#d4cfc7' }}>
-                        <div className="text-sm sm:text-base leading-relaxed prose prose-sm max-w-none dark:prose-invert">
-                          <ReactMarkdown>
-                            {message.text}
-                          </ReactMarkdown>
-                        </div>
-                      </div>
-                    </div>
-                    <p className={`text-xs text-gray-400 mt-2 ${message.type === 'user' ? 'text-right' : 'text-left'}`}>
-                      {message.time}
-                    </p>
-                  </div>
-                </div>
-              ))}
-
-              {/* Typing Indicator */}
-              {isTyping && (
-                <div className="flex justify-start">
-                  <div className="flex items-end gap-2.5">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center shadow-md" style={{ backgroundColor: '#263B6A' }}>
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div className="px-5 py-3 rounded-2xl rounded-bl-md shadow-sm border border-gray-200" style={{ backgroundColor: '#FFFFFF' }}>
-                      <div className="flex gap-1">
-                        <span className="w-2.5 h-2.5 rounded-full animate-bounce" style={{ backgroundColor: '#263B6A' }}></span>
-                        <span className="w-2.5 h-2.5 rounded-full animate-bounce" style={{ backgroundColor: '#263B6A', animationDelay: '0.1s' }}></span>
-                        <span className="w-2.5 h-2.5 rounded-full animate-bounce" style={{ backgroundColor: '#263B6A', animationDelay: '0.2s' }}></span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input Area */}
-            <div className="p-4 sm:p-5 bg-white border-t border-gray-200">
-              <div className="flex gap-3 items-end">
-                {/* Professional Icon Only Clear Chat */}
-                <button
-                  onClick={clearAllChats}
-                  className="p-4 bg-white hover:bg-gray-50 shadow-md hover:shadow-lg border border-gray-200 backdrop-blur-sm rounded-2xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center w-14 h-14 lg:w-16 lg:h-16 group relative"
-                  title="Clear Chat"
-                >
-                  <svg className="w-6 h-6 text-slate-700 group-hover:text-red-600 transition-colors duration-200" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-                <div className="flex-1 relative">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                    placeholder="Type your health question..."
-                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:border-transparent transition-all text-gray-700 placeholder-gray-400"
-                    style={{ '--tw-ring-color': '#547792' }}
-                  />
-                </div>
-                <button
-                  onClick={handleSend}
-                  disabled={!inputText.trim()}
-                  className="px-6 py-4 lg:px-10 lg:py-4 font-bold rounded-2xl hover:opacity-90 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center text-white active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: '#263B6A' }}
-                  title="Send Message"
-                >
-                  <span>Send</span>
-                </button>
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+            <p className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Previous Chats</p>
+            {sessions.length === 0 ? (
+              <div className="p-8 text-center bg-white/50 rounded-2xl border border-dashed border-slate-200 mx-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase">No History Found</p>
               </div>
-
-              <div className="flex items-center justify-center gap-2 mt-3">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <p className="text-xs text-gray-400">
-                  AI Assistant provides general health information. Always consult a healthcare professional for medical advice.
-                </p>
-              </div>
-            </div>
+            ) : (
+              sessions.map(session => {
+                const sid = session._id?.$oid || session._id;
+                return (
+                  <div key={sid} className="relative group/session">
+                    <button
+                      onClick={() => setActiveSessionId(sid)}
+                      className={`w-full p-4 rounded-2xl text-left transition-all border relative overflow-hidden ${activeSessionId === sid ? 'bg-white border-indigo-200 shadow-md translate-x-1' : 'bg-transparent border-transparent hover:bg-white hover:border-slate-200'}`}
+                    >
+                      {activeSessionId === sid && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600"></div>}
+                      <p className={`text-[11px] font-black leading-tight line-clamp-2 mb-2 pr-6 ${activeSessionId === sid ? 'text-indigo-600' : 'text-slate-700'}`}>
+                        {session.chatName || 'New Conversation'}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <p className="text-[9px] font-bold text-slate-400">
+                          {new Date(session.createdAt || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteSession(sid); }}
+                      className="absolute right-3 top-4 p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-all active:scale-95"
+                      title="Delete Session"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
-        {/* Clear Chat Modal */}
-        {showClearModal && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-              onClick={() => setShowClearModal(false)}
-            />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none">
-              <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 max-w-md w-full mx-4 pointer-events-auto">
-                <div className="p-8 pt-12 pb-6 text-center border-b border-gray-100">
-                  <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center shadow-xl">
-                    <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden relative">
+          {/* Messages Container */}
+          <div className="flex-1 p-6 overflow-y-auto space-y-6 bg-slate-50/30 custom-scrollbar">
+            {isLoadingHistory ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+              </div>
+            ) : (
+              <>
+                {messages.map((message) => (
+                  <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300 group/msg`}>
+                    <div className={`max-w-[85%] sm:max-w-[70%] flex gap-4 ${message.type === 'user' ? 'flex-row-reverse' : ''} items-start`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg ${message.type === 'ai' ? 'bg-slate-900' : 'bg-indigo-600'}`}>
+                        {message.type === 'ai' ? (
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                        ) : (
+                          <span className="text-white text-[10px] font-black uppercase tracking-tight">User</span>
+                        )}
+                      </div>
+                      <div className="space-y-1.5 overflow-hidden flex-1">
+                        <div className="relative group/msg-content">
+                          <div className={`px-5 py-4 rounded-2xl shadow-sm text-sm leading-relaxed ${message.type === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-100 rounded-tl-none'}`}>
+                            <div className={`prose prose-sm max-w-none ${message.type === 'user' ? 'prose-invert' : 'prose-slate'}`}>
+                              <ReactMarkdown>
+                                {message.text}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                          {message.id !== 'welcome-msg' && (
+                            <button
+                              onClick={() => handleDeleteMessage(message.id)}
+                              className={`absolute ${message.type === 'user' ? '-left-10' : '-right-10'} top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover/msg-content:opacity-100 transition-all active:scale-90`}
+                              title="Delete Message"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          )}
+                        </div>
+                        <p className={`text-[10px] font-black uppercase tracking-widest text-slate-400 ${message.type === 'user' ? 'text-right' : 'text-left'}`}>
+                          {message.time}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Clear Chat History</h2>
-                  <p className="text-gray-600 text-lg mb-1">This action will permanently delete all messages.</p>
-                  <p className="text-sm text-gray-500">Chat will reset to welcome message.</p>
-                </div>
-                <div className="p-8 pt-0 space-y-3 mt-6">
-                  <button
-                    onClick={confirmClearChats}
-                    className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-4 px-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] border border-red-400/30 text-lg"
-                  >
-                    Clear All Chats
-                  </button>
-                  <button
-                    onClick={() => setShowClearModal(false)}
-                    className="w-full bg-gradient-to-r from-slate-100 to-slate-200 hover:from-slate-200 hover:to-slate-300 text-slate-800 font-semibold py-4 px-6 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02] border border-slate-300/50 text-lg"
-                  >
-                    Cancel
-                  </button>
+                ))}
+
+                {isTyping && (
+                  <div className="flex justify-start animate-pulse">
+                    <div className="flex gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shrink-0 shadow-lg">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                      </div>
+                      <div className="px-5 py-4 bg-white rounded-2xl rounded-tl-none shadow-sm border border-slate-100">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce"></span>
+                          <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce delay-75"></span>
+                          <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce delay-150"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input Area */}
+          <div className="p-6 bg-white border-t border-slate-100">
+            <div className="max-w-4xl mx-auto flex gap-4 items-end">
+              <button
+                onClick={clearAllChats}
+                className="p-4 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-2xl transition-all border border-slate-100 hover:border-red-100 shadow-sm"
+                title="Clear Session"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </button>
+              <div className="flex-1 relative group">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                  placeholder={activeDocId ? "Ask about this report..." : "Type your medical question..."}
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:bg-white focus:border-indigo-400 transition-all text-sm font-medium"
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  <span className="px-2 py-1 bg-slate-200 text-slate-500 rounded text-[9px] font-black uppercase tracking-widest hidden sm:block">Enter to Send</span>
                 </div>
               </div>
+              <button
+                onClick={() => handleSend()}
+                disabled={!inputText.trim() || isTyping}
+                className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg hover:shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+              >
+                Send
+              </button>
             </div>
-          </>
-        )}
+            <p className="mt-4 text-center text-[10px] font-medium text-slate-400 flex items-center justify-center gap-2">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              AI can provide general guidance only. For medical emergencies or specific advice, please consult a clinical professional.
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Clear Modal */}
+      {showClearModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowClearModal(false)}></div>
+          <div className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md p-10 overflow-hidden text-center">
+            <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-red-100">
+              <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </div>
+            <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight mb-2">Reset Session?</h2>
+            <p className="text-slate-500 font-medium text-sm mb-10 leading-relaxed">This will clear the current conversation window and reset context. Session history will remain in sidebar.</p>
+            <div className="flex flex-col gap-3">
+              <button onClick={confirmClearChats} className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 shadow-xl active:scale-95 transition-all">Yes, Clear Context</button>
+              <button onClick={() => setShowClearModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 active:scale-95 transition-all">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

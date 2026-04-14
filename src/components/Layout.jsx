@@ -152,7 +152,7 @@ const Layout = ({ children, title, titleBadge, headerActions }) => {
   return (
     <div className="min-h-screen bg-white">
       {/* Top Navbar */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-[#263B6A]/30 shadow-[0_2px_8px_rgba(0,0,0,0.18)]" style={{ backgroundColor: '#263B6A' }}>
+      <header className="fixed top-0 left-0 right-0 z-[100] border-b border-[#263B6A]/30 shadow-[0_2px_8px_rgba(0,0,0,0.18)]" style={{ backgroundColor: '#263B6A' }}>
         <div className="flex items-center justify-between px-4 lg:px-6 py-3">
           {/* Left - Logo & Burger Menu */}
           <div className="flex items-center gap-4">
