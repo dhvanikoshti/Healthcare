@@ -8,6 +8,8 @@ import {
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import CustomSelect from '../components/CustomSelect';
 
+const N8N_API_KEY = import.meta.env.VITE_N8N_API_KEY;
+
 const UploadReport = () => {
   const [dragActive, setDragActive] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -115,6 +117,9 @@ const UploadReport = () => {
 
         const n8nResponse = await fetch('http://localhost:5678/webhook/medical-report-analyze', {
           method: 'POST',
+          headers: {
+            'X-API-Key': N8N_API_KEY
+          },
           body: formData,
         });
 

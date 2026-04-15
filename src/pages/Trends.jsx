@@ -89,9 +89,13 @@ const TrendAnalysis = () => {
 
       // Sort fetched reports client-side to ensure nothing is filtered out by Firestore index issues
       let finalReports = fetchedReports.sort((a, b) => {
-        const dateA = a.reportDate ? new Date(a.reportDate) : new Date(0);
-        const dateB = b.reportDate ? new Date(b.reportDate) : new Date(0);
-        return dateA - dateB;
+        const parseDate = (d) => {
+          if (!d) return new Date(0);
+          if (typeof d?.toDate === 'function') return d.toDate();
+          const parsed = new Date(d);
+          return isNaN(parsed.getTime()) ? new Date(0) : parsed;
+        };
+        return parseDate(a.reportDate) - parseDate(b.reportDate);
       });
 
       // Add disambiguation suffixes for reports with identical names and dates
