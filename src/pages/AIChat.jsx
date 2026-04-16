@@ -22,16 +22,10 @@ const AIChat = () => {
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [tappedMsgId, setTappedMsgId] = useState(null);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
-
-  const quickQuestions = [
-    'Explain my latest blood test',
-    'What foods should I avoid?',
-    'How can I improve my hemoglobin?',
-    'When should I schedule my next checkup?',
-  ];
 
   // ─── AUTH LISTENER ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -456,21 +450,25 @@ const AIChat = () => {
               </button>
             </div>
           )}
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-          </button>
         </div>
       }
     >
-      <div className="h-[calc(100vh-160px)] flex gap-6">
+      <div className="h-[calc(100vh-160px)] flex gap-6 relative overflow-hidden">
+        {/* Mobile Sidebar Backdrop */}
+        <div
+          className={`lg:hidden absolute inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity duration-300 rounded-[2rem] ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          onClick={() => setIsSidebarOpen(false)}
+        />
+
         {/* Sidebar */}
-        <div className={`${isSidebarOpen ? 'flex' : 'hidden'} lg:flex flex-col w-72 bg-slate-50 border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm`}>
+        <div className={`
+          flex flex-col w-72 max-w-[85%] bg-slate-50 border border-slate-200 rounded-[2rem] overflow-hidden lg:shadow-sm transition-transform duration-300 h-full
+          absolute lg:relative z-50 lg:z-0 left-0
+          ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0 shadow-none'}
+        `}>
           <div className="p-4 border-b border-slate-200/60 bg-white">
             <button
-              onClick={startNewChat}
+              onClick={() => { startNewChat(); if (window.innerWidth < 1024) setIsSidebarOpen(false); }}
               className="w-full flex items-center justify-center gap-3 py-3.5 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all shadow-lg active:scale-95"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
@@ -490,11 +488,11 @@ const AIChat = () => {
                 return (
                   <div key={sid} className="relative group/session">
                     <button
-                      onClick={() => setActiveSessionId(sid)}
-                      className={`w-full p-4 rounded-2xl text-left transition-all border relative overflow-hidden flex flex-col gap-1 shadow-sm ${activeSessionId === sid ? 'bg-white border-indigo-300 shadow-md translate-x-1' : 'bg-white/70 border-slate-100 hover:bg-white hover:border-indigo-200 hover:shadow-md'}`}
+                      onClick={() => { setActiveSessionId(sid); if (window.innerWidth < 1024) setIsSidebarOpen(false); }}
+                      className={`w-full p-3 rounded-2xl text-left transition-all border relative overflow-hidden flex flex-col shadow-sm ${activeSessionId === sid ? 'bg-white border-indigo-300 shadow-md translate-x-1' : 'bg-white/70 border-slate-100 hover:bg-white hover:border-indigo-200 hover:shadow-md'}`}
                     >
                       {activeSessionId === sid && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600"></div>}
-                      <p className={`text-[11px] font-black leading-tight line-clamp-2 mb-2 pr-6 ${activeSessionId === sid ? 'text-indigo-600' : 'text-slate-700'}`}>
+                      <p className={`text-[11px] font-black leading-tight truncate mb-1 pr-6 w-full ${activeSessionId === sid ? 'text-indigo-600' : 'text-slate-700'}`}>
                         {session.chatName || 'New Conversation'}
                       </p>
                       <div className="flex items-center gap-2">
@@ -526,7 +524,18 @@ const AIChat = () => {
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-hidden relative">
+        <div className="flex-1 flex flex-col bg-white rounded-[2rem] shadow-none lg:shadow-xl border border-slate-200 overflow-hidden relative">
+          {/* Mobile Toggle Menu - Forced Reload */}
+          <div className="lg:hidden p-4 pb-0 bg-gray-100 z-10 flex items-center justify-between">
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors flex items-center gap-2"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-400">History</span>
+            </button>
+          </div>
+
           {/* Messages Container */}
           <div className="flex-1 p-6 overflow-y-auto space-y-6 bg-slate-50/30 custom-scrollbar">
             {isLoadingHistory ? (
@@ -537,8 +546,8 @@ const AIChat = () => {
               <>
                 {messages.map((message) => (
                   <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300 group/msg`}>
-                    <div className={`max-w-[85%] sm:max-w-[70%] flex gap-4 ${message.type === 'user' ? 'flex-row-reverse' : ''} items-start`}>
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg ${message.type === 'ai' ? 'bg-slate-900' : 'bg-indigo-600'}`}>
+                    <div className={`max-w-[92%] md:max-w-[88%] lg:max-w-[85%] flex gap-2 sm:gap-4 ${message.type === 'user' ? 'flex-row-reverse' : ''} items-start`}>
+                      <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg ${message.type === 'ai' ? 'bg-slate-900' : 'bg-indigo-600'} -mt-3 sm:mt-0 relative z-10`}>
                         {message.type === 'ai' ? (
                           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                         ) : (
@@ -546,7 +555,10 @@ const AIChat = () => {
                         )}
                       </div>
                       <div className="space-y-1.5 flex-1">
-                        <div className="relative group/msg-content">
+                        <div 
+                          className="relative group/msg-content"
+                          onClick={() => setTappedMsgId(tappedMsgId === message.id ? null : message.id)}
+                        >
                           <div className={`px-5 py-4 rounded-2xl shadow-sm text-sm leading-relaxed ${message.type === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'}`}>
                             <div className={`prose prose-sm max-w-none ${message.type === 'user' ? 'prose-invert' : 'prose-slate'}`}>
                               <ReactMarkdown>
@@ -556,8 +568,8 @@ const AIChat = () => {
                           </div>
                           {message.id !== 'welcome-msg' && (
                             <button
-                              onClick={() => handleDeleteMessage(message.id)}
-                              className={`absolute ${message.type === 'user' ? '-left-10' : '-right-10'} top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl opacity-0 group-hover/msg-content:opacity-100 transition-all duration-200 active:scale-90`}
+                              onClick={(e) => { e.stopPropagation(); handleDeleteMessage(message.id); }}
+                              className={`absolute ${message.type === 'user' ? '-left-8 sm:-left-10' : '-right-8 sm:-right-10'} top-1/2 -translate-y-1/2 p-1.5 sm:p-2 text-slate-400 sm:text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200 active:scale-90 ${tappedMsgId === message.id ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 md:group-hover/msg-content:opacity-100 pointer-events-none md:pointer-events-auto'}`}
                               title="Delete Message"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -574,8 +586,8 @@ const AIChat = () => {
 
                 {isTyping && (
                   <div className="flex justify-start animate-pulse">
-                    <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shrink-0 shadow-lg">
+                    <div className="flex gap-2 sm:gap-4">
+                      <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-xl bg-slate-900 flex items-center justify-center shrink-0 shadow-lg -mt-3 sm:mt-0">
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                       </div>
                       <div className="px-5 py-4 bg-white rounded-2xl rounded-tl-none shadow-sm border border-slate-100">
@@ -594,14 +606,14 @@ const AIChat = () => {
           </div>
 
           {/* Input Area */}
-          <div className="p-6 bg-white border-t border-slate-100">
-            <div className="max-w-4xl mx-auto flex gap-4 items-end">
+          <div className="p-3 sm:p-6 bg-white border-t border-slate-100">
+            <div className="max-w-4xl mx-auto flex gap-2 sm:gap-4 items-end">
               <button
                 onClick={clearAllChats}
-                className="p-4 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-2xl transition-all border border-slate-100 hover:border-red-100 shadow-sm"
+                className="p-3 sm:p-4 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-2xl transition-all border border-slate-100 hover:border-red-100 shadow-sm shrink-0"
                 title="Clear Session"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
               </button>
               <div className="flex-1 relative group">
                 <input
@@ -611,17 +623,16 @@ const AIChat = () => {
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                   placeholder={activeDocId ? "Ask about this report..." : "Type your medical question..."}
-                  className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:bg-white focus:border-indigo-400 transition-all text-sm font-medium"
+                  className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-[1rem] sm:rounded-2xl focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-indigo-100 focus:bg-white focus:border-indigo-400 transition-all text-sm font-medium"
                 />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                </div>
               </div>
               <button
                 onClick={() => handleSend()}
                 disabled={!inputText.trim() || isTyping}
-                className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg hover:shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                className="px-4 sm:px-8 py-3.5 sm:py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg hover:shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shrink-0"
               >
-                Send
+                <span className="hidden sm:inline">Send</span>
+                <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
               </button>
             </div>
             <p className="mt-4 text-center text-[10px] font-medium text-slate-400 flex items-center justify-center gap-2">

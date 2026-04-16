@@ -418,23 +418,8 @@ const HealthInsights = () => {
                             <div>
                               <h2 className="text-lg font-bold text-slate-800 tracking-tight">Clinical Insight & Guidance</h2>
                               <p className="text-xs font-medium text-slate-500">Diagnostic Intelligence Review</p>
-                            </div>
                           </div>
-
-                          {/* AI Chat Integration Icon */}
-                          <Link
-                            to="/chat"
-                            state={{ reportId: (reportsData.find(r => r.id === selectedReportId) || {}).mongoId || selectedReportId }}
-                            className="flex items-center gap-2.5 px-4 py-2 bg-gradient-to-tr from-indigo-600 to-violet-500 text-white rounded-xl shadow-lg shadow-indigo-100 hover:shadow-indigo-200 hover:scale-105 active:scale-95 transition-all group"
-                          >
-                            <div className="relative">
-                              <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                              </svg>
-                              <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-cyan-400 rounded-full animate-pulse border-2 border-[#8b5cf6]"></div>
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.15em] hidden sm:inline">Ask AI assistant</span>
-                          </Link>
+                          </div>
                         </div>
 
                         <div className="flex flex-col">

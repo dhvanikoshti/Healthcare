@@ -155,12 +155,9 @@ const Landing = () => {
 
       {/* Hero Section */}
       <section
-        className="pt-20 sm:pt-24 lg:pt-28 pb-8 sm:pb-12 lg:pb-16 px-4 sm:px-6 lg:px-8"
+        className="mt-16 pt-4 sm:mt-0 sm:pt-24 lg:pt-28 pb-8 sm:pb-12 lg:pb-16 px-4 sm:px-6 lg:px-8 bg-top sm:bg-center bg-[length:100%_auto] sm:bg-contain bg-no-repeat"
         style={{
           backgroundImage: 'linear-gradient(rgba(38, 59, 106, 0.45), rgba(38, 59, 106, 0.45)), url(/src/assets/hero_section.png)',
-          backgroundSize: 'contain',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
           backgroundColor: '#263B6A'
         }}
       >
@@ -170,7 +167,7 @@ const Landing = () => {
             <div className="hidden md:block md:col-span-6 lg:col-span-7"></div>
             {/* Right side - Content */}
             <div className="md:col-span-6 lg:col-span-5 text-right relative z-10">
-              <h1 className="mt-20 sm:mt-0 md:mt-0 lg:mt-0 text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight">
+              <h1 className="mt-4 sm:mt-0 md:mt-0 lg:mt-0 text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight">
                 Your Health,<br className="md:hidden" />{" "}
                 <span className="whitespace-nowrap">
                   <span style={{ color: '#547792' }}>Smarter</span>
@@ -182,7 +179,7 @@ const Landing = () => {
                  */}
                 AI-powered technology analyzes your health data in real time to track the progress , deliver personalized recommendations , and detect potential risks before they become serious problems.
               </p>
-              <div className="mt-20 sm:mt-15 lg:mt-6 flex flex-col md:flex-row gap-3 sm:gap-4 lg:gap-6 items-end md:items-center justify-end">
+              <div className="mt-6 sm:mt-15 lg:mt-6 flex flex-col md:flex-row gap-3 sm:gap-4 lg:gap-6 items-end md:items-center justify-end">
                 <Link to="/register" className="w-full md:w-auto text-center px-5 sm:px-6 lg:px-7 py-2.5 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg shadow-lg hover:scale-105 transition transform" style={{ backgroundColor: '#547792' }}>Start Free Trial</Link>
                 <button onClick={startDemo} className="w-full md:w-auto px-5 sm:px-6 lg:px-7 py-2.5 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg border-2 border-white/30 hover:bg-white/10 transition">Watch Demo</button>
               </div>
