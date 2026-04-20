@@ -1090,14 +1090,14 @@ const TrendAnalysis = () => {
 
             {isDropdownOpen && (
               <>
-                {/* Invisible backdrop to capture clicks - same as CustomSelect */}
+                {/* Transparent backdrop for outside clicks */}
                 <div
-                  className="fixed inset-0 z-[80]"
+                  className="fixed inset-0 z-[110] bg-transparent"
                   onClick={() => setIsDropdownOpen(false)}
                 />
 
-                <div className="absolute top-full right-0 z-[90] mt-2 w-72 sm:w-80 overflow-hidden bg-white rounded-2xl border border-slate-100 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)]">
-                  <div className="max-h-[320px] overflow-y-auto py-2">
+                <div className="absolute top-full left-0 sm:left-auto sm:right-0 z-[120] mt-2 w-72 sm:w-80 overflow-hidden bg-white rounded-2xl border border-slate-100 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in duration-200 origin-top-left sm:origin-top-right">
+                  <div className="max-h-[320px] overflow-y-auto custom-scrollbar py-2">
                     {extractedMedicalData.map(report => {
                       const isSelected = selectedReports.some(sr => sr.id === report.id);
                       return (
@@ -1108,7 +1108,7 @@ const TrendAnalysis = () => {
                           className={`w-full px-5 py-3 text-left flex items-center justify-between group transition-colors ${isSelected ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}`}
                         >
                           <div className="min-w-0 flex-1">
-                            <p className={`text-sm font-medium truncate ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>
+                            <p className={`text-sm font-bold truncate ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>
                               {report.reportName}
                             </p>
                             <div className="flex items-center gap-2 mt-0.5">
@@ -1131,7 +1131,7 @@ const TrendAnalysis = () => {
 
                   {viewMode === 'trends' && (
                     <div className="p-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">
                         {selectedReports.length} Selection
                       </span>
                       <button

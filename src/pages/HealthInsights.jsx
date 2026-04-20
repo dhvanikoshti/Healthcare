@@ -225,22 +225,23 @@ const HealthInsights = () => {
   return (
     <Layout
       title="Health Insights"
-      headerActions={
-        <div className="flex items-center gap-3">
-          <div className="hidden lg:flex flex-col items-end mr-2">
-            <p className="text-[10px] font-black text-cyan-600 uppercase tracking-widest leading-none mb-1">Selected Dataset</p>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Switch for detailed analysis</p>
+      titleBadge={
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="hidden sm:flex flex-col items-end">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Selected Dataset</span>
+            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Switch for detailed analysis</span>
           </div>
-          <div className="relative" ref={datasetRef}>
+
+          <div className="relative">
             <button
               onClick={() => setIsDatasetOpen(!isDatasetOpen)}
-              className={`bg-white border-2 text-slate-800 py-2.5 px-5 rounded-2xl font-black text-xs shadow-sm outline-none transition-all cursor-pointer flex items-center gap-4 min-w-[240px] justify-between ${isDatasetOpen ? 'border-indigo-500 ring-4 ring-indigo-500/10' : 'border-slate-200'}`}
+              className={`bg-white border-2 text-slate-800 py-1.5 px-3 sm:py-2.5 sm:px-5 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs shadow-sm outline-none transition-all cursor-pointer flex items-center gap-2 sm:gap-4 min-w-0 sm:min-w-[240px] justify-between ${isDatasetOpen ? 'border-indigo-500 ring-4 ring-indigo-500/10' : 'border-slate-200'}`}
             >
-              <span className="truncate max-w-[180px]">
-                {userReports.find(r => r.id === selectedReportId)?.displayName || 'Select Report for Analysis'}
+              <span className="truncate max-w-[100px] sm:max-w-[180px]">
+                {userReports.find(r => r.id === selectedReportId)?.displayName || 'Select Report'}
               </span>
               <svg
-                className={`w-4 h-4 text-indigo-500 transition-transform duration-300 ${isDatasetOpen ? 'rotate-180' : ''}`}
+                className={`w-3 h-3 sm:w-4 sm:h-4 text-indigo-500 transition-transform duration-300 ${isDatasetOpen ? 'rotate-180' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -250,29 +251,37 @@ const HealthInsights = () => {
             </button>
 
             {isDatasetOpen && (
-              <div className="absolute top-full right-0 mt-3 w-full min-w-[280px] bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 animate-in fade-in zoom-in duration-200 origin-top-right">
-                <div className="max-h-[320px] overflow-y-auto custom-scrollbar">
-                  {userReports.map((report) => (
-                    <button
-                      key={report.id}
-                      onClick={() => {
-                        setSelectedReportId(report.id);
-                        setIsDatasetOpen(false);
-                      }}
-                      className={`w-full text-left px-5 py-3.5 text-xs font-bold transition-all flex items-center justify-between group hover:bg-slate-50 ${selectedReportId === report.id ? 'bg-indigo-50/50 text-indigo-600' : 'text-slate-600'}`}
-                    >
-                      <span className="truncate pr-4">{report.displayName}</span>
-                      {selectedReportId === report.id && (
-                        <div className="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center shadow-sm">
-                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      )}
-                    </button>
-                  ))}
+              <>
+                {/* Transparent backdrop for outside clicks */}
+                <div
+                  className="fixed inset-0 z-[110] bg-transparent"
+                  onClick={() => setIsDatasetOpen(false)}
+                />
+
+                <div className="absolute top-full right-0 mt-3 w-full min-w-[280px] bg-white rounded-2xl shadow-2xl border border-slate-100 z-[120] animate-in fade-in zoom-in duration-200 flex flex-col max-h-[320px] overflow-hidden origin-top-right">
+                  <div className="overflow-y-auto custom-scrollbar py-2">
+                    {userReports.map((report) => (
+                      <button
+                        key={report.id}
+                        onClick={() => {
+                          setSelectedReportId(report.id);
+                          setIsDatasetOpen(false);
+                        }}
+                        className={`w-full text-left px-5 py-3.5 text-xs font-bold transition-all flex items-center justify-between group hover:bg-slate-50 ${selectedReportId === report.id ? 'bg-indigo-50/50 text-indigo-700' : 'text-slate-600'}`}
+                      >
+                        <span className="truncate pr-4">{report.displayName}</span>
+                        {selectedReportId === report.id && (
+                          <div className="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center shadow-sm shrink-0">
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>
@@ -381,8 +390,8 @@ const HealthInsights = () => {
                           </div>
 
                           <h2 className="text-2xl sm:text-3xl font-black text-slate-800 mb-2 tracking-tight uppercase flex flex-col gap-1 sm:gap-2">
-                             <span>{reportData?.analysis ? 'No Risks' : 'Please select report for'}</span>
-                             <span className="text-blue-600">{reportData?.analysis ? 'Detected' : 'Risk Assessment'}</span>
+                            <span>{reportData?.analysis ? 'No Risks' : 'Please select report for'}</span>
+                            <span className="text-blue-600">{reportData?.analysis ? 'Detected' : 'Risk Assessment'}</span>
                           </h2>
 
                           <p className="text-slate-400 font-medium text-xs sm:text-sm leading-relaxed max-w-md mb-8">
@@ -418,7 +427,7 @@ const HealthInsights = () => {
                             <div>
                               <h2 className="text-lg font-bold text-slate-800 tracking-tight">Clinical Insight & Guidance</h2>
                               <p className="text-xs font-medium text-slate-500">Diagnostic Intelligence Review</p>
-                          </div>
+                            </div>
                           </div>
                         </div>
 

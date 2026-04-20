@@ -7,6 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import {
   collection, getDocs, query, orderBy, deleteDoc, doc
 } from 'firebase/firestore';
+import axios from 'axios';
 
 const Reports = () => {
   const [reports, setReports] = useState([]);
@@ -76,9 +77,8 @@ const Reports = () => {
     // We try the blob approach first (for custom filename)
     // If it fails (CORS), we fallback to direct window open
     try {
-      const response = await fetch(report.fileData, { mode: 'cors' });
-      if (!response.ok) throw new Error('CORS or Network error');
-      const blob = await response.blob();
+      const response = await axios.get(report.fileData, { responseType: 'blob' });
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -103,8 +103,8 @@ const Reports = () => {
     const fetchBlob = async () => {
       if (selectedReport && (selectedReport.type === 'pdf' || selectedReport.fileData.toLowerCase().endsWith('.pdf'))) {
         try {
-          const response = await fetch(selectedReport.fileData);
-          const blob = await response.blob();
+          const response = await axios.get(selectedReport.fileData, { responseType: 'blob' });
+          const blob = response.data;
           const url = URL.createObjectURL(blob);
           setBlobUrl(url);
         } catch (err) {

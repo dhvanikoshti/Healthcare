@@ -9,7 +9,18 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
-    port: 5173,
-    strictPort: false,
+    port: 3000,
+    open: true,
   }
 })
+
+
+
+// export default defineConfig({
+//   plugins: [react()],
+//   base: '/',
+//   server: {
+//     open: true,
+//     port: 3000
+//   }
+// })

@@ -155,14 +155,14 @@ const Landing = () => {
 
       {/* Hero Section */}
       <section
-        className="mt-16 pt-4 sm:mt-0 sm:pt-24 lg:pt-28 pb-8 sm:pb-12 lg:pb-16 px-4 sm:px-6 lg:px-8 bg-top sm:bg-center bg-[length:100%_auto] sm:bg-contain bg-no-repeat"
+        className="mt-16 pt-4 sm:pt-8 lg:pt-12 pb-2 sm:pb-10 lg:pb-12 px-4 sm:px-6 lg:px-8 bg-top bg-[length:100%_auto] sm:bg-cover bg-no-repeat"
         style={{
           backgroundImage: 'linear-gradient(rgba(38, 59, 106, 0.45), rgba(38, 59, 106, 0.45)), url(/src/assets/hero_section.png)',
           backgroundColor: '#263B6A'
         }}
       >
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center min-h-[20vh] sm:min-h-[50vh] lg:min-h-[60vh]">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center sm:min-h-[45vh] md:min-h-[50vh] lg:min-h-[60vh]">
             {/* Left side - Empty spacer for desktop backdrop framing */}
             <div className="hidden md:block md:col-span-6 lg:col-span-7"></div>
             {/* Right side - Content */}
@@ -179,9 +179,9 @@ const Landing = () => {
                  */}
                 AI-powered technology analyzes your health data in real time to track the progress , deliver personalized recommendations , and detect potential risks before they become serious problems.
               </p>
-              <div className="mt-6 sm:mt-15 lg:mt-6 flex flex-col md:flex-row gap-3 sm:gap-4 lg:gap-6 items-end md:items-center justify-end">
-                <Link to="/register" className="w-full md:w-auto text-center px-5 sm:px-6 lg:px-7 py-2.5 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg shadow-lg hover:scale-105 transition transform" style={{ backgroundColor: '#547792' }}>Start Free Trial</Link>
-                <button onClick={startDemo} className="w-full md:w-auto px-5 sm:px-6 lg:px-7 py-2.5 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg border-2 border-white/30 hover:bg-white/10 transition">Watch Demo</button>
+              <div className="mt-10 sm:mt-40 md:mt-8 lg:mt-10 flex flex-row gap-3 sm:gap-4 lg:gap-6 items-center justify-end">
+                <Link to="/register" className="flex-1 md:flex-none text-center px-4 sm:px-6 lg:px-7 py-2 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg shadow-lg hover:scale-105 transition transform whitespace-nowrap" style={{ backgroundColor: '#547792' }}>Start Free Trial</Link>
+                <button onClick={startDemo} className="flex-1 md:flex-none px-4 sm:px-6 lg:px-7 py-2 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg border-2 border-white/30 hover:bg-white/10 transition whitespace-nowrap">Watch Demo</button>
               </div>
             </div>
           </div>

@@ -6,6 +6,7 @@ import {
   collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp, updateDoc
 } from 'firebase/firestore';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
+import axios from 'axios';
 import CustomSelect from '../components/CustomSelect';
 
 const N8N_API_KEY = import.meta.env.VITE_N8N_API_KEY;
@@ -115,22 +116,20 @@ const UploadReport = () => {
         formData.append('userId', currentUser.uid);
         formData.append('reportId', docRef.id);
 
-        const n8nResponse = await fetch('http://localhost:5678/webhook/medical-report-analyze', {
-          method: 'POST',
+        const n8nResponse = await axios.post('http://localhost:5678/webhook/medical-report-analyze', formData, {
           headers: {
             'X-API-Key': N8N_API_KEY
-          },
-          body: formData,
+          }
         });
 
-        if (n8nResponse.ok) {
-          const responseText = await n8nResponse.text();
-          if (responseText) {
-            let rawData;
-            try { rawData = JSON.parse(responseText); } catch (e) { console.warn('Non-JSON response'); }
-            if (rawData) {
-              setUploadProgress(85);
-              let aiAnalysisData = Array.isArray(rawData) ? rawData[0] : rawData;
+        if (n8nResponse.status === 200) {
+          let rawData = n8nResponse.data;
+          if (typeof rawData === 'string') {
+            try { rawData = JSON.parse(rawData); } catch (e) { console.warn('Non-JSON response'); }
+          }
+          if (rawData) {
+            setUploadProgress(85);
+            let aiAnalysisData = Array.isArray(rawData) ? rawData[0] : rawData;
               if (aiAnalysisData && aiAnalysisData.item) aiAnalysisData = aiAnalysisData.item;
 
               const analyzedCategory = (aiAnalysisData.report_category || aiAnalysisData.report_type || aiAnalysisData.category || aiAnalysisData.type || 'Blood Test').toString().trim();
@@ -143,7 +142,6 @@ const UploadReport = () => {
             } else {
               throw new Error("Invalid response format from AI Engine");
             }
-          }
         } else {
           throw new Error(`AI Engine returned error: ${n8nResponse.statusText}`);
         }
@@ -194,8 +192,8 @@ const UploadReport = () => {
   const handleDownload = async (report) => {
     if (!report.fileData) return;
     try {
-      const response = await fetch(report.fileData, { mode: 'cors' });
-      const blob = await response.blob();
+      const response = await axios.get(report.fileData, { responseType: 'blob' });
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -262,8 +260,8 @@ const UploadReport = () => {
       setIsViewerLoading(true);
       if (viewReport.type === 'pdf' && viewReport.fileData) {
         try {
-          const response = await fetch(viewReport.fileData);
-          const blob = await response.blob();
+          const response = await axios.get(viewReport.fileData, { responseType: 'blob' });
+          const blob = response.data;
           setBlobUrl(URL.createObjectURL(blob));
         } catch (err) { setBlobUrl(viewReport.fileData); }
         finally { setIsViewerLoading(false); }

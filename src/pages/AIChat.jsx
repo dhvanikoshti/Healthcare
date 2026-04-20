@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import { useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ReactMarkdown from 'react-markdown';
@@ -23,6 +24,9 @@ const AIChat = () => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [tappedMsgId, setTappedMsgId] = useState(null);
+  const [editingSessionId, setEditingSessionId] = useState(null);
+  const [editSessionName, setEditSessionName] = useState('');
+  const [activeMenuSessionId, setActiveMenuSessionId] = useState(null);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -119,15 +123,15 @@ const AIChat = () => {
           return timeA - timeB;
         });
 
-      setMessages([
+      setMessages(history.length === 0 ? [
         {
           id: 'welcome-msg',
           type: 'ai',
           text: "Hello! I'm your AI Health Assistant. How can I help you today?",
-          time: ''
-        },
-        ...history
-      ]);
+          time: '',
+          timestamp: Date.now()
+        }
+      ] : history);
     } catch (error) {
       console.error("Error fetching messages from Firestore:", error);
     } finally {
@@ -193,10 +197,21 @@ const AIChat = () => {
         id: 'welcome-msg',
         type: 'ai',
         text: "Hello! I'm your AI Health Assistant. How can I help you today?",
-        time: ''
+        time: '',
+        timestamp: Date.now()
       }]);
     }
   }, [currentUser, activeSessionId, fetchMessages]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (activeMenuSessionId && !event.target.closest('.session-menu-container')) {
+        setActiveMenuSessionId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeMenuSessionId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -224,6 +239,7 @@ const AIChat = () => {
       type: 'user',
       text: userText,
       time: timeNow,
+      timestamp: Date.now()
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -232,28 +248,27 @@ const AIChat = () => {
 
     try {
       const isNew = !activeSessionId;
-      const response = await fetch('http://localhost:5678/webhook/ChatBotCollection', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': N8N_API_KEY
-        },
-        body: JSON.stringify({
-          userId: currentUser.uid,
-          message: userText,
-          isNew: isNew,
-          sessionId: activeSessionId,
-          docContext: !!activeDocId,
-          docId: activeDocId
-        }),
+      const response = await axios.post('http://localhost:5678/webhook/ChatBotCollection', {
+        userId: currentUser.uid,
+        message: userText,
+        isNew: isNew,
+        sessionId: activeSessionId,
+        docContext: !!activeDocId,
+        docId: activeDocId
+      }, {
+        headers: { 'X-API-Key': N8N_API_KEY }
       });
 
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (response.status !== 200) throw new Error(`HTTP error! status: ${response.status}`);
 
-      const text = await response.text();
-      if (!text) throw new Error("Empty response from AI engine");
-
-      const dataArr = JSON.parse(text);
+      const rawData = response.data;
+      if (!rawData) throw new Error("Empty response from AI engine");
+      
+      let dataArr = rawData;
+      if (typeof rawData === 'string') {
+        try { dataArr = JSON.parse(rawData); } catch (e) { dataArr = rawData; }
+      }
+      
       const data = Array.isArray(dataArr) ? dataArr[0] : dataArr;
       const aiResponseText = data.aiResponse || "I couldn't process that.";
       const newSessionId = data.sessionId;
@@ -283,6 +298,7 @@ const AIChat = () => {
         type: 'ai',
         text: aiResponseText,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: Date.now()
       };
 
       setMessages(prev => [...prev, aiResponse]);
@@ -349,6 +365,41 @@ const AIChat = () => {
     }
   };
 
+  const confirmRenameSession = async (sid, newName) => {
+    if (!currentUser || !sid || !newName.trim()) {
+      setEditingSessionId(null);
+      return;
+    }
+
+    try {
+      console.log("Renaming session in Firestore:", sid, "to", newName);
+      const sessionRef = doc(db, 'users', currentUser.uid, 'sessions', sid);
+      await updateDoc(sessionRef, { chatName: newName.trim() });
+
+      // Update local state
+      setSessions(prev => prev.map(s => s.id === sid ? { ...s, chatName: newName.trim() } : s));
+      setEditingSessionId(null);
+      console.log("Session renamed successfully.");
+    } catch (error) {
+      console.error("Error renaming session:", error);
+    }
+  };
+
+  const togglePinSession = async (sid, currentPinnedStatus) => {
+    if (!currentUser || !sid) return;
+    try {
+      console.log("Toggling pin status for session:", sid);
+      const sessionRef = doc(db, 'users', currentUser.uid, 'sessions', sid);
+      await updateDoc(sessionRef, { pinned: !currentPinnedStatus });
+
+      setSessions(prev => prev.map(s =>
+        (s.id === sid || s._id === sid) ? { ...s, pinned: !currentPinnedStatus } : s
+      ));
+    } catch (error) {
+      console.error("Error toggling pin status:", error);
+    }
+  };
+
   const handleDeleteMessage = async (mid) => {
     if (!currentUser) return;
 
@@ -412,7 +463,8 @@ const AIChat = () => {
       id: 'welcome-msg',
       type: 'ai',
       text: "Hello! I'm your AI Health Assistant. How can I help you today?",
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: Date.now()
     }]);
     setActiveDocId(null);
   };
@@ -424,6 +476,30 @@ const AIChat = () => {
     // For now, we clear the local active session
     startNewChat();
     setShowClearModal(false);
+  };
+
+  const formatMessageDate = (timestamp) => {
+    if (!timestamp) return 'Today';
+    let date;
+    if (timestamp.toMillis) {
+      date = new Date(timestamp.toMillis());
+    } else {
+      date = new Date(timestamp);
+    }
+    
+    if (isNaN(date.getTime())) return 'Today';
+
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
   };
 
   if (currentUser === undefined) {
@@ -439,6 +515,15 @@ const AIChat = () => {
   return (
     <Layout
       title="Health Assistant"
+      titleBadge={
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="lg:hidden p-2 text-slate-600 hover:bg-slate-200/50 rounded-xl transition-colors flex items-center gap-2 border border-slate-200/60 bg-white shadow-sm"
+        >
+          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" /></svg>
+          <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest text-slate-500">History</span>
+        </button>
+      }
       headerActions={
         <div className="flex items-center gap-3">
           {activeDocId && (
@@ -453,16 +538,16 @@ const AIChat = () => {
         </div>
       }
     >
-      <div className="h-[calc(100vh-160px)] flex gap-6 relative overflow-hidden">
+      <div className="h-[calc(100vh-130px)] sm:h-[calc(100vh-160px)] -mx-4 sm:mx-0 -mt-4 sm:mt-0 flex gap-6 relative overflow-hidden">
         {/* Mobile Sidebar Backdrop */}
         <div
-          className={`lg:hidden absolute inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity duration-300 rounded-[2rem] ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          className={`lg:hidden absolute inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity duration-300 sm:rounded-[2rem] ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           onClick={() => setIsSidebarOpen(false)}
         />
 
         {/* Sidebar */}
         <div className={`
-          flex flex-col w-72 max-w-[85%] bg-slate-50 border border-slate-200 rounded-[2rem] overflow-hidden lg:shadow-sm transition-transform duration-300 h-full
+          flex flex-col w-72 max-w-[85%] bg-slate-50 border-r sm:border border-slate-200 sm:rounded-[2rem] overflow-hidden lg:shadow-sm transition-transform duration-300 h-full
           absolute lg:relative z-50 lg:z-0 left-0
           ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0 shadow-none'}
         `}>
@@ -483,7 +568,7 @@ const AIChat = () => {
                 <p className="text-[10px] font-bold text-slate-400 uppercase">No History Found</p>
               </div>
             ) : (
-              sessions.map(session => {
+              [...sessions].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)).map(session => {
                 const sid = session._id?.$oid || session._id;
                 return (
                   <div key={sid} className="relative group/session">
@@ -492,9 +577,31 @@ const AIChat = () => {
                       className={`w-full p-3 rounded-2xl text-left transition-all border relative overflow-hidden flex flex-col shadow-sm ${activeSessionId === sid ? 'bg-white border-indigo-300 shadow-md translate-x-1' : 'bg-white/70 border-slate-100 hover:bg-white hover:border-indigo-200 hover:shadow-md'}`}
                     >
                       {activeSessionId === sid && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600"></div>}
-                      <p className={`text-[11px] font-black leading-tight truncate mb-1 pr-6 w-full ${activeSessionId === sid ? 'text-indigo-600' : 'text-slate-700'}`}>
-                        {session.chatName || 'New Conversation'}
-                      </p>
+                      {editingSessionId === sid ? (
+                        <div className="flex items-center gap-2 mb-1 pr-1" onClick={e => e.stopPropagation()}>
+                          <input
+                            autoFocus
+                            type="text"
+                            value={editSessionName}
+                            onChange={(e) => setEditSessionName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') confirmRenameSession(sid, editSessionName);
+                              if (e.key === 'Escape') setEditingSessionId(null);
+                            }}
+                            onBlur={() => confirmRenameSession(sid, editSessionName)}
+                            className="w-full text-[11px] font-bold text-indigo-600 bg-indigo-50/50 border border-indigo-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 mb-1 pr-6 w-full">
+                          <p className={`text-[11px] font-black leading-tight truncate ${activeSessionId === sid ? 'text-indigo-600' : 'text-slate-700'}`}>
+                            {session.chatName || 'New Conversation'}
+                          </p>
+                          {session.pinned && (
+                            <svg className="w-3 h-3 text-indigo-500 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11V6a4 4 0 00-8 0v5l-2 3v2h5v6l1 1 1-1v-6h5v-2l-2-3z" /></svg>
+                          )}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         <p className="text-[9px] font-bold text-slate-400">
@@ -509,13 +616,57 @@ const AIChat = () => {
                         </p>
                       </div>
                     </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDeleteSession(sid); }}
-                      className="absolute right-3 top-4 p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-all active:scale-95"
-                      title="Delete Session"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
+                    <div className="absolute right-2 top-3 z-20 session-menu-container">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuSessionId(activeMenuSessionId === sid ? null : sid);
+                        }}
+                        className={`p-1.5 rounded-lg transition-all active:scale-95 ${activeMenuSessionId === sid ? 'bg-indigo-50 text-indigo-600 opacity-100' : 'text-slate-400 hover:text-indigo-500 opacity-100 lg:opacity-0 lg:group-hover/session:opacity-100'}`}
+                        title="Options"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" /></svg>
+                      </button>
+
+                      {activeMenuSessionId === sid && (
+                        <div className="absolute right-0 mt-1 w-36 bg-white rounded-xl shadow-xl border border-slate-100 py-1.5 animate-in fade-in zoom-in-95 duration-200">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePinSession(sid, session.pinned);
+                              setActiveMenuSessionId(null);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11V6a4 4 0 00-8 0v5l-2 3v2h5v6l1 1 1-1v-6h5v-2l-2-3z" /></svg>
+                            {session.pinned ? 'Unpin' : 'Pin'}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingSessionId(sid);
+                              setEditSessionName(session.chatName || 'New Conversation');
+                              setActiveMenuSessionId(null);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            Rename
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSession(sid);
+                              setActiveMenuSessionId(null);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-[10px] font-bold text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })
@@ -524,18 +675,7 @@ const AIChat = () => {
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col bg-white rounded-[2rem] shadow-none lg:shadow-xl border border-slate-200 overflow-hidden relative">
-          {/* Mobile Toggle Menu - Forced Reload */}
-          <div className="lg:hidden p-4 pb-0 bg-gray-100 z-10 flex items-center justify-between">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors flex items-center gap-2"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-400">History</span>
-            </button>
-          </div>
-
+        <div className="flex-1 flex flex-col bg-white rounded-none sm:rounded-[2rem] shadow-none lg:shadow-xl border-0 sm:border border-slate-200 overflow-hidden relative">
           {/* Messages Container */}
           <div className="flex-1 p-6 overflow-y-auto space-y-6 bg-slate-50/30 custom-scrollbar">
             {isLoadingHistory ? (
@@ -544,45 +684,60 @@ const AIChat = () => {
               </div>
             ) : (
               <>
-                {messages.map((message) => (
-                  <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300 group/msg`}>
-                    <div className={`max-w-[92%] md:max-w-[88%] lg:max-w-[85%] flex gap-2 sm:gap-4 ${message.type === 'user' ? 'flex-row-reverse' : ''} items-start`}>
-                      <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg ${message.type === 'ai' ? 'bg-slate-900' : 'bg-indigo-600'} -mt-3 sm:mt-0 relative z-10`}>
-                        {message.type === 'ai' ? (
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                        ) : (
-                          <span className="text-white text-[10px] font-black uppercase tracking-tight">You</span>
-                        )}
-                      </div>
-                      <div className="space-y-1.5 flex-1">
-                        <div 
-                          className="relative group/msg-content"
-                          onClick={() => setTappedMsgId(tappedMsgId === message.id ? null : message.id)}
-                        >
-                          <div className={`px-5 py-4 rounded-2xl shadow-sm text-sm leading-relaxed ${message.type === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'}`}>
-                            <div className={`prose prose-sm max-w-none ${message.type === 'user' ? 'prose-invert' : 'prose-slate'}`}>
-                              <ReactMarkdown>
-                                {message.text}
-                              </ReactMarkdown>
-                            </div>
+                {messages.map((message, index) => {
+                  const currentDateStr = formatMessageDate(message.timestamp || Date.now());
+                  const prevDateStr = index > 0 ? formatMessageDate(messages[index - 1].timestamp || Date.now()) : null;
+                  const showDateDivider = currentDateStr !== prevDateStr;
+
+                  return (
+                    <div key={message.id} className="space-y-6">
+                      {showDateDivider && (
+                        <div className="flex justify-center my-2 animate-in fade-in duration-300">
+                          <div className="px-3 py-1 bg-slate-200/50 rounded-full text-[9px] font-bold text-slate-500 uppercase tracking-widest backdrop-blur-sm">
+                            {currentDateStr}
                           </div>
-                          {message.id !== 'welcome-msg' && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteMessage(message.id); }}
-                              className={`absolute ${message.type === 'user' ? '-left-8 sm:-left-10' : '-right-8 sm:-right-10'} top-1/2 -translate-y-1/2 p-1.5 sm:p-2 text-slate-400 sm:text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200 active:scale-90 ${tappedMsgId === message.id ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 md:group-hover/msg-content:opacity-100 pointer-events-none md:pointer-events-auto'}`}
-                              title="Delete Message"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                          )}
                         </div>
-                        <p className={`text-[10px] font-black uppercase tracking-widest text-slate-400 ${message.type === 'user' ? 'text-right' : 'text-left'}`}>
-                          {message.time}
-                        </p>
+                      )}
+                      <div className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300 group/msg`}>
+                        <div className={`max-w-[92%] md:max-w-[88%] lg:max-w-[85%] flex gap-2 sm:gap-4 ${message.type === 'user' ? 'flex-row-reverse' : ''} items-start`}>
+                          <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg ${message.type === 'ai' ? 'bg-slate-900' : 'bg-indigo-600'} -mt-3 sm:mt-0 relative z-10`}>
+                            {message.type === 'ai' ? (
+                              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                            ) : (
+                              <span className="text-white text-[10px] font-black uppercase tracking-tight">You</span>
+                            )}
+                          </div>
+                          <div className="space-y-1.5 flex-1">
+                            <div
+                              className="relative group/msg-content"
+                              onClick={() => setTappedMsgId(tappedMsgId === message.id ? null : message.id)}
+                            >
+                              <div className={`px-5 py-4 rounded-2xl shadow-sm text-sm leading-relaxed ${message.type === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'}`}>
+                                <div className={`prose prose-sm max-w-none ${message.type === 'user' ? 'prose-invert' : 'prose-slate'}`}>
+                                  <ReactMarkdown>
+                                    {message.text}
+                                  </ReactMarkdown>
+                                </div>
+                              </div>
+                              {message.id !== 'welcome-msg' && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteMessage(message.id); }}
+                                  className={`absolute ${message.type === 'user' ? '-left-8 sm:-left-10' : '-right-8 sm:-right-10'} top-1/2 -translate-y-1/2 p-1.5 sm:p-2 text-slate-400 sm:text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200 active:scale-90 ${tappedMsgId === message.id ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 md:group-hover/msg-content:opacity-100 pointer-events-none md:pointer-events-auto'}`}
+                                  title="Delete Message"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                              )}
+                            </div>
+                            <p className={`text-[10px] font-black uppercase tracking-widest text-slate-400 ${message.type === 'user' ? 'text-right' : 'text-left'}`}>
+                              {message.time}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {isTyping && (
                   <div className="flex justify-start animate-pulse">
