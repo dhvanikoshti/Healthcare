@@ -4,7 +4,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { auth, db, googleProvider } from '../firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getSystemFingerprint, getSystemName, getBrowserName } from '../utils/deviceFingerprint';
 
 const Login = () => {

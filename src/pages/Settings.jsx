@@ -13,9 +13,7 @@ const Settings = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isFullImageView, setIsFullImageView] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
-  const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
   const fileInputRef = useRef(null);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -110,7 +108,7 @@ const Settings = () => {
         showToastMsg('Image must be under 2MB', 'error');
         return;
       }
-      setSelectedImageFile(file);
+
       setIsUploading(true);
 
       try {
@@ -148,7 +146,7 @@ const Settings = () => {
 
   const handleRemoveProfileImage = async () => {
     setProfileImage(null);
-    setSelectedImageFile(null);
+
     setUserData(prev => ({ ...prev, profileImage: '' }));
     if (fileInputRef.current) fileInputRef.current.value = '';
     setIsFullImageView(false);
@@ -185,7 +183,7 @@ const Settings = () => {
 
     // Update UI instantly
     setUserData(updatedUserData);
-    setSelectedImageFile(null);
+
     setIsEditing(false);
     showToastMsg('Profile updated successfully!', 'success');
 
@@ -273,7 +271,7 @@ const Settings = () => {
   };
 
   const handleLogoutAll = async () => {
-    setIsUpdating(true); // Using isUpdating as a general loading state
+
     try {
       const auth = getAuth();
       const user = auth.currentUser;
@@ -292,7 +290,7 @@ const Settings = () => {
       console.error('Error logging out from all devices:', error);
       showToastMsg('Failed to logout from all devices', 'error');
     }
-    setIsUpdating(false);
+
     setShowLogoutModal(false);
     showToastMsg('Successfully logged out from all devices');
   };

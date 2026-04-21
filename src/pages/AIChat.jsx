@@ -40,7 +40,7 @@ const AIChat = () => {
   // ─── FETCH SESSIONS ───────────────────────────────────────────────────────
   const fetchSessions = useCallback(async (userId) => {
     if (!userId) return;
-    console.log("Fetching sessions from Firestore for user:", userId);
+
     try {
       const q = query(collection(db, 'users', userId, 'sessions'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
@@ -49,7 +49,7 @@ const AIChat = () => {
         ...doc.data(),
         _id: doc.id // compatibility
       }));
-      console.log("Firestore Sessions loaded:", loadedSessions);
+
       setSessions(loadedSessions);
       return loadedSessions;
     } catch (error) {
@@ -63,7 +63,7 @@ const AIChat = () => {
   const fetchMessages = useCallback(async (userId, sessionId) => {
     if (!userId || !sessionId) return;
     setIsLoadingHistory(true);
-    console.log("Fetching messages from Firestore for session:", sessionId);
+
     try {
       const q = query(
         collection(db, 'users', userId, 'chats'),
@@ -266,7 +266,7 @@ const AIChat = () => {
       
       let dataArr = rawData;
       if (typeof rawData === 'string') {
-        try { dataArr = JSON.parse(rawData); } catch (e) { dataArr = rawData; }
+        try { dataArr = JSON.parse(rawData); } catch { dataArr = rawData; }
       }
       
       const data = Array.isArray(dataArr) ? dataArr[0] : dataArr;
@@ -327,7 +327,7 @@ const AIChat = () => {
     if (!sid || !currentUser) return;
 
     try {
-      console.log("Deleting session from Firestore:", sid);
+
 
       const batch = writeBatch(db);
 
@@ -359,7 +359,7 @@ const AIChat = () => {
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }]);
       }
-      console.log("Session deleted from Firebase. MongoDB backup preserved.");
+
     } catch (error) {
       console.error("Error during Firebase deletion:", error);
     }
@@ -372,14 +372,14 @@ const AIChat = () => {
     }
 
     try {
-      console.log("Renaming session in Firestore:", sid, "to", newName);
+
       const sessionRef = doc(db, 'users', currentUser.uid, 'sessions', sid);
       await updateDoc(sessionRef, { chatName: newName.trim() });
 
       // Update local state
       setSessions(prev => prev.map(s => s.id === sid ? { ...s, chatName: newName.trim() } : s));
       setEditingSessionId(null);
-      console.log("Session renamed successfully.");
+
     } catch (error) {
       console.error("Error renaming session:", error);
     }
@@ -388,7 +388,7 @@ const AIChat = () => {
   const togglePinSession = async (sid, currentPinnedStatus) => {
     if (!currentUser || !sid) return;
     try {
-      console.log("Toggling pin status for session:", sid);
+
       const sessionRef = doc(db, 'users', currentUser.uid, 'sessions', sid);
       await updateDoc(sessionRef, { pinned: !currentPinnedStatus });
 
@@ -400,15 +400,17 @@ const AIChat = () => {
     }
   };
 
-  const handleDeleteMessage = async (mid) => {
-    if (!currentUser) return;
+  const confirmDeleteMessage = async () => {
+    const mid = showDeleteMessageModal;
+    setShowDeleteMessageModal(null);
+    if (!mid || !currentUser) return;
 
     // Messages loaded from history have '-u' or '-a' suffix (e.g. 'abc123-u', 'abc123-a')
     // The actual Firebase document ID is the base without the suffix
     const baseDocId = mid.replace(/-[ua]$/, '');
 
     try {
-      console.log("Deleting message from Firestore. Base Doc ID:", baseDocId);
+
       await deleteDoc(doc(db, 'users', currentUser.uid, 'chats', baseDocId));
 
       // Remove both user question (-u) and AI answer (-a) from UI
@@ -427,7 +429,7 @@ const AIChat = () => {
         const remainingSnap = await getDocs(remainingQ);
 
         if (remainingSnap.empty) {
-          console.log("Session has no remaining messages. Deleting session:", activeSessionId);
+
 
           // Delete session metadata from Firestore
           await deleteDoc(doc(db, 'users', currentUser.uid, 'sessions', activeSessionId));
@@ -451,7 +453,7 @@ const AIChat = () => {
         }
       }
 
-      console.log("Message deleted from Firebase. MongoDB backup preserved.");
+
     } catch (error) {
       console.error("Error deleting message from Firestore:", error);
     }
@@ -608,8 +610,8 @@ const AIChat = () => {
                           {(() => {
                             try {
                               const date = session.createdAt?.toDate ? session.createdAt.toDate() : new Date(session.createdAt || Date.now());
-                              return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                            } catch (e) {
+                                return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                            } catch {
                               return 'Recent';
                             }
                           })()}
@@ -721,7 +723,7 @@ const AIChat = () => {
                               </div>
                               {message.id !== 'welcome-msg' && (
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteMessage(message.id); }}
+                                  onClick={(e) => { e.stopPropagation(); setShowDeleteMessageModal(message.id); }}
                                   className={`absolute ${message.type === 'user' ? '-left-8 sm:-left-10' : '-right-8 sm:-right-10'} top-1/2 -translate-y-1/2 p-1.5 sm:p-2 text-slate-400 sm:text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200 active:scale-90 ${tappedMsgId === message.id ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 md:group-hover/msg-content:opacity-100 pointer-events-none md:pointer-events-auto'}`}
                                   title="Delete Message"
                                 >

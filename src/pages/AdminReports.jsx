@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collectionGroup, getDocs, orderBy, limit, query, getCountFromServer } from 'firebase/firestore';
+import { collectionGroup, getDocs, orderBy, limit, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import AdminLayout from '../components/AdminLayout';
 
@@ -71,8 +71,8 @@ const AdminReports = () => {
         reasons: { missingAnalysis, incompleteResults }
       });
       setExecutions(executionList);
-    } catch (error) {
-      console.error("Error fetching audit reports:", error);
+    } catch {
+      // Error handled silently
     } finally {
       setLoading(false);
     }

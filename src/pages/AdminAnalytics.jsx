@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import AdminLayout from '../components/AdminLayout';
 import CustomSelect from '../components/CustomSelect';
-import { collection, getDocs, query, limit, collectionGroup, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, limit, collectionGroup } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const COLORS = [
@@ -30,10 +30,7 @@ const AdminAnalytics = () => {
   ]);
 
   const [totalUsers, setTotalUsers] = useState(0);
-  const [timeRange, setTimeRange] = useState('30d');
-  const [startDate, setStartDate] = useState('2024-01-01');
-  const [endDate, setEndDate] = useState('2024-07-15');
-  const [showCustomRange, setShowCustomRange] = useState(false);
+
 
   // Risk filter states
   const [riskFilter, setRiskFilter] = useState('all');
@@ -99,7 +96,6 @@ const AdminAnalytics = () => {
     };
 
     const fetchReportCategoryDist = async () => {
-      setIsLoading(true);
       setError(null);
       try {
         // Query the 300 latest reports across the whole platform
@@ -107,10 +103,9 @@ const AdminAnalytics = () => {
         const q = query(collectionGroup(db, 'reports'), limit(500));
         const snapshot = await getDocs(q);
 
-        console.log(`[Analytics] Fetched ${snapshot.size} reports across all users.`);
+
 
         const counts = {};
-        const severityMap = {};
         const catRiskMap = {};
         let grandTotal = 0;
         let highCount = 0;
@@ -136,10 +131,7 @@ const AdminAnalytics = () => {
           counts[cat] = (counts[cat] || 0) + 1;
           grandTotal++;
 
-          const isAbnormal = (data.total_abnormals || 0) > 0 || (data.risks && data.risks.length > 0);
-          if (isAbnormal) {
-            severityMap[cat] = (severityMap[cat] || 0) + 1;
-          }
+
 
           const overallHealth = data.overall_health || data.analysis?.overall_health || data.overallHealth || data.analysis?.overallHealth || '';
           const healthStr = String(overallHealth).toUpperCase().trim();
@@ -159,7 +151,6 @@ const AdminAnalytics = () => {
         const dynamicData = Object.entries(counts)
           .map(([name, count], index) => {
             const percentage = grandTotal > 0 ? Number(((count / grandTotal) * 100).toFixed(1)) : 0;
-            const abRatio = (severityMap[name] || 0) / count;
 
             const crm = catRiskMap[name] || { high: 0, medium: 0, low: 0 };
             let level = 'Low';
@@ -196,10 +187,6 @@ const AdminAnalytics = () => {
     fetchReportCategoryDist();
   }, []);
 
-  const handleTimeRangeChange = (range) => {
-    setTimeRange(range);
-    setShowCustomRange(range === 'custom');
-  };
 
   // Filter and sort risk categories
   const filteredRiskData = riskCategoryData
@@ -228,22 +215,6 @@ const AdminAnalytics = () => {
     return classes[level] || classes.Medium;
   };
 
-  const getLevelColor = (level) => {
-    const colors = {
-      High: '#dc2626',
-      Medium: '#f59e0b',
-      Low: '#10b981',
-    };
-    return colors[level] || colors.Medium;
-  };
-
-  const getTrendIcon = (trend) => {
-    return trend.startsWith('+') ? '↑' : '↓';
-  };
-
-  const getTrendColor = (trend) => {
-    return trend.startsWith('+') ? 'text-red-600' : 'text-green-600';
-  };
 
   return (
     <AdminLayout
@@ -258,36 +229,7 @@ const AdminAnalytics = () => {
         </div>
       }
     >
-      <div className="space-y-6">
 
-        {showCustomRange && (
-          <div className="mt-6 p-4 bg-white/10 rounded-xl backdrop-blur-sm">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-white/80">From:</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="px-4 py-2 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-white/80">To:</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="px-4 py-2 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50"
-                />
-              </div>
-              <button className="px-6 py-2 bg-white text-[#263B6A] font-semibold rounded-xl hover:bg-white/90 transition-colors">
-                Apply
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Enhanced Risk Category Distribution - Attractive Design with Filters */}
       <div className="bg-white rounded-2xl p-5 md:p-6 shadow-lg border border-gray-100 mt-8">
@@ -318,7 +260,7 @@ const AdminAnalytics = () => {
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-gray-50/50 rounded-xl">
           {/* Search */}
-          <div className="flex-1 min-w-[200px] relative">
+          <div className="flex-1 min-w-50 relative">
             <input
               type="text"
               placeholder="Search risk categories..."
@@ -359,7 +301,7 @@ const AdminAnalytics = () => {
         </div>
 
         {/* Pie Chart / Detail View */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-[400px]">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-100">
           {isLoading ? (
             <div className="col-span-2 flex flex-col items-center justify-center py-20">
               <div className="w-12 h-12 border-4 border-[#263B6A] border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -388,7 +330,7 @@ const AdminAnalytics = () => {
                         outerRadius={100}
                         paddingAngle={4}
                         dataKey="value"
-                        onClick={(data, index) => setSelectedRisk(selectedRisk?.id === data.id ? null : data)}
+                        onClick={(data) => setSelectedRisk(selectedRisk?.id === data.id ? null : data)}
                         style={{ cursor: 'pointer' }}
                       >
                         {filteredRiskData.map((entry, index) => (
@@ -435,7 +377,7 @@ const AdminAnalytics = () => {
 
               {/* Enhanced Risk Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar items-start auto-rows-max">
-                {filteredRiskData.map((item, index) => (
+                {filteredRiskData.map((item) => (
                   <div
                     key={item.id}
                     onClick={() => setSelectedRisk(selectedRisk?.id === item.id ? null : item)}

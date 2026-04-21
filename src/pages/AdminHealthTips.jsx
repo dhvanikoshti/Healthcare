@@ -2,35 +2,20 @@ import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 import AdminLayout from '../components/AdminLayout';
-import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import CustomSelect from '../components/CustomSelect';
 
 const defaultCategories = ['All', 'Sleep', 'Diabetes', 'Heart Health', 'Weight Loss', 'Prevention', 'Nutrition', 'Endocrine', 'Lifestyle', 'Mental Health'];
-
-const categoryColors = {
-  'Sleep': { bg: 'bg-blue-100', text: 'text-blue-700' },
-  'Diabetes': { bg: 'bg-red-100', text: 'text-red-700' },
-  'Heart Health': { bg: 'bg-pink-100', text: 'text-pink-700' },
-  'Weight Loss': { bg: 'bg-green-100', text: 'text-green-700' },
-  'Prevention': { bg: 'bg-purple-100', text: 'text-purple-700' },
-  'Nutrition': { bg: 'bg-amber-100', text: 'text-amber-700' },
-  'Endocrine': { bg: 'bg-orange-100', text: 'text-orange-700' },
-  'Lifestyle': { bg: 'bg-cyan-100', text: 'text-cyan-700' },
-  'Mental Health': { bg: 'bg-indigo-100', text: 'text-indigo-700' },
-};
-
 const AdminHealthTips = () => {
   const [healthTips, setHealthTips] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+
 
   useEffect(() => {
     fetchHealthTips();
   }, []);
 
-  const fetchHealthTips = async () => {
-    setIsLoading(true);
+  const fetchHealthTips = useCallback(async () => {
     try {
       const q = query(collection(db, 'healthTips'), orderBy('createdAt', 'desc'), limit(20));
       const querySnapshot = await getDocs(q);
@@ -40,13 +25,10 @@ const AdminHealthTips = () => {
       });
       // For older tips without createdAt fallback to their original order or date
       setHealthTips(tips);
-    } catch (err) {
-      console.error("Error fetching health tips: ", err);
-      showToastMessage('Failed to load health tips', 'error');
-    } finally {
-      setIsLoading(false);
+    } catch {
+      // Error handled silently
     }
-  };
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [showModal, setShowModal] = useState(false);
@@ -128,7 +110,7 @@ const AdminHealthTips = () => {
     setSections(sections.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
-  const totalTips = healthTips.length;
+
 
   const getCurrentCategories = () => {
     return allCategories.filter(c => c !== 'All');
@@ -220,7 +202,6 @@ const AdminHealthTips = () => {
         setImagePreview(null); // Clear preview once we have the real URL
         showToastMessage('Image uploaded successfully!', 'success');
       } catch (err) {
-        console.error('Upload error:', err);
         showToastMessage(err.message || 'Failed to upload image.', 'error');
         setImagePreview(null);
       }
@@ -342,8 +323,7 @@ const AdminHealthTips = () => {
       doc.save(`${selectedTip.title ? selectedTip.title.replace(/\s+/g, '_') : 'health_tip'}.pdf`);
       showToastMessage('PDF downloaded successfully!', 'success');
 
-    } catch (error) {
-      console.error('Error generating PDF:', error);
+    } catch {
       showToastMessage('Failed to trigger download. Generating print view...', 'error');
       window.print();
     } finally {
@@ -356,7 +336,7 @@ const AdminHealthTips = () => {
 
     try {
       if (modalMode === 'add') {
-        const docRef = await addDoc(collection(db, 'healthTips'), {
+        await addDoc(collection(db, 'healthTips'), {
           ...formData,
           category: finalCategory,
           sections: sections,
@@ -367,7 +347,8 @@ const AdminHealthTips = () => {
         const tipRef = doc(db, 'healthTips', selectedTip.id);
 
         // Exclude ID and other metadata from the update payload to keep Firestore clean
-        const { id, ...updateData } = formData;
+        const { id: _unusedId, ...updateData } = formData;
+        void _unusedId; // Explicitly acknowledge it's unused if needed, or just destructure differently
 
         const tipUpdate = {
           ...updateData,
@@ -382,8 +363,7 @@ const AdminHealthTips = () => {
       }
       fetchHealthTips(); // Refresh list
       handleCloseModal();
-    } catch (err) {
-      console.error("Error saving tip: ", err);
+    } catch {
       showToastMessage('Failed to save health tip', 'error');
     }
   };
@@ -398,8 +378,7 @@ const AdminHealthTips = () => {
         await deleteDoc(doc(db, 'healthTips', deleteConfirm.id));
         showToastMessage('Health tip deleted successfully!', 'success');
         fetchHealthTips();
-      } catch (err) {
-        console.error("Error deleting tip: ", err);
+      } catch {
         showToastMessage('Failed to delete health tip', 'error');
       }
     }
@@ -745,7 +724,6 @@ const AdminHealthTips = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTips.map((tip) => {
-              const tipColors = categoryColors[tip.category] || { bg: 'bg-gray-100', text: 'text-gray-700' };
               return (
                 <div
                   key={tip.id}

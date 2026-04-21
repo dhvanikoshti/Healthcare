@@ -24,7 +24,7 @@ const AdminLayout = ({ children, title, subtitle, headerActions }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const [activeMenu, setActiveMenu] = useState('/admin/dashboard');
+  const activeMenu = location.pathname;
   const [userData, setUserData] = useState({ name: 'Admin', email: '', profileImage: null });
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
@@ -81,9 +81,9 @@ const AdminLayout = ({ children, title, subtitle, headerActions }) => {
       unsubscribeAuth();
       if (unsubscribeSessions) unsubscribeSessions();
     };
-  }, []);
+  }, [navigate]);
 
-  useEffect(() => { setActiveMenu(location.pathname); }, [location.pathname]);
+
   const getFirstLetter = (name) => name ? name.charAt(0).toUpperCase() : 'A';
   const handleLogout = async () => {
     try {
@@ -104,8 +104,7 @@ const AdminLayout = ({ children, title, subtitle, headerActions }) => {
     }
     navigate('/login');
   };
-  const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
-  const toggleMobileSidebar = () => setSidebarOpen(!sidebarOpen);
+
 
   const menuItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', iconBg: '#06b6d4' },
@@ -190,7 +189,7 @@ const AdminLayout = ({ children, title, subtitle, headerActions }) => {
         </div>
       </header>
 
-      <aside className={`hidden lg:flex pt-4 flex-col fixed left-0 top-[60px] bottom-0 z-40 bg-white border-r border-gray-200 shadow-[2px_0_8px_rgba(0,0,0,0.06)] transition-all duration-300 ${sidebarWidth}`}>
+      <aside className={`hidden lg:flex pt-4 flex-col fixed left-0 top-15 bottom-0 z-40 bg-white border-r border-gray-200 shadow-[2px_0_8px_rgba(0,0,0,0.06)] transition-all duration-300 ${sidebarWidth}`}>
 
         <div className="flex-1 overflow-y-auto py-4 px-3">
           <nav className="space-y-2">
@@ -202,7 +201,7 @@ const AdminLayout = ({ children, title, subtitle, headerActions }) => {
                 style={activeMenu === item.path ? { backgroundColor: '#263B6A' } : {}}
                 title={sidebarCollapsed ? item.name : ''}
               >
-                <div className={`w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center transition-all`} style={{ backgroundColor: activeMenu === item.path ? 'rgba(255,255,255,0.2)' : item.iconBg + '20' }}>
+                <div className={`w-11 h-11 rounded-xl shrink-0 flex items-center justify-center transition-all`} style={{ backgroundColor: activeMenu === item.path ? 'rgba(255,255,255,0.2)' : item.iconBg + '20' }}>
                   <svg className="w-5 h-5" style={{ color: activeMenu === item.path ? 'white' : item.iconBg }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
                   </svg>
@@ -214,7 +213,7 @@ const AdminLayout = ({ children, title, subtitle, headerActions }) => {
         </div>
       </aside>
 
-      <aside className={`lg:hidden fixed left-0 top-[60px] bottom-0 z-40 bg-white pt-4 shadow-2xl w-72 transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`lg:hidden fixed left-0 top-15 bottom-0 z-40 bg-white pt-4 shadow-2xl w-72 transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
         <div className="h-[calc(100%-70px)] overflow-y-auto py-4 px-3">
           <nav className="space-y-2">
@@ -232,9 +231,9 @@ const AdminLayout = ({ children, title, subtitle, headerActions }) => {
 
       {sidebarOpen && <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setSidebarOpen(false)}></div>}
 
-      <main className={`pt-[60px] transition-all duration-300 ${mainMargin}`} style={{ backgroundColor: 'white' }}>
+      <main className={`pt-15 transition-all duration-300 ${mainMargin}`} style={{ backgroundColor: 'white' }}>
         {title && (
-          <div className="bg-slate-100/100 border-b border-slate-200/80 pt-10 pb-5 px-6 sm:px-8 lg:px-10 flex flex-col md:flex-row justify-between md:items-center gap-4 transition-all">
+          <div className="bg-slate-100 border-b border-slate-200/80 pt-10 pb-5 px-6 sm:px-8 lg:px-10 flex flex-col md:flex-row justify-between md:items-center gap-4 transition-all">
             <div className="flex items-center gap-3">
               <div className="h-8 w-1.5 bg-[#263B6A] rounded-full shadow-sm"></div>
               <div>
@@ -254,7 +253,7 @@ const AdminLayout = ({ children, title, subtitle, headerActions }) => {
 
       {/* Full Screen Image Modal */}
       {isFullImageView && userData.profileImage && (
-        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-fade-in backdrop-blur-sm">
+        <div className="fixed inset-0 z-100 bg-black/95 flex items-center justify-center animate-fade-in backdrop-blur-sm">
           <button
             onClick={() => setIsFullImageView(false)}
             className="absolute top-6 right-6 w-12 h-12 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-all transform hover:scale-110 shadow-2xl"

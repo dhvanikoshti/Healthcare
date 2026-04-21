@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../components/AdminLayout';
-import { collection, getDocs, doc, updateDoc, query, orderBy, limit, startAfter, getCountFromServer } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, startAfter, getCountFromServer } from 'firebase/firestore';
 import { db } from '../firebase';
 import CustomSelect from '../components/CustomSelect';
 
@@ -16,13 +16,18 @@ const mapOverallHealthToRisk = (healthString) => {
   return 'Low';
 };
 
+const getInitials = (name) => {
+  if (!name) return 'U';
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+};
+
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [riskFilter, setRiskFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedUsers, setSelectedUsers] = useState([]);
+
   const [viewUser, setViewUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isFullImageView, setIsFullImageView] = useState(false);
@@ -33,15 +38,10 @@ const AdminUsers = () => {
 
   const usersPerPage = 8;
 
-  const getInitials = (name) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
-  const fetchUsers = async (isNextPage = false) => {
+  const fetchUsers = useCallback(async (isNextPage = false) => {
     try {
       if (isNextPage) setFetchingMore(true);
-      else setLoading(true);
+      else if (!loading) setLoading(true); 
 
       const usersRef = collection(db, 'users');
       let q;
@@ -160,11 +160,12 @@ const AdminUsers = () => {
       setLoading(false);
       setFetchingMore(false);
     }
-  };
+  }, [lastDoc, loading]);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   // Filter users
   const filteredUsers = users.filter(user => {
@@ -181,35 +182,6 @@ const AdminUsers = () => {
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
 
-  const handleSelectUser = (userId) => {
-    setSelectedUsers(prev =>
-      prev.includes(userId)
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    if (selectedUsers.length === currentUsers.length) {
-      setSelectedUsers([]);
-    } else {
-      setSelectedUsers(currentUsers.map(user => user.id));
-    }
-  };
-
-  const handleToggleStatus = async (user) => {
-    try {
-      const newStatus = user.status === 'Active' ? 'Inactive' : 'Active';
-      const userRef = doc(db, 'users', user.id);
-      await updateDoc(userRef, { status: newStatus });
-      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
-      if (viewUser && viewUser.id === user.id) {
-        setViewUser(prev => ({ ...prev, status: newStatus }));
-      }
-    } catch (error) {
-      console.error("Error toggling user status:", error);
-    }
-  };
 
   const getRiskBadge = (risk) => {
     const classes = {
@@ -473,7 +445,7 @@ const AdminUsers = () => {
                         {loading ? 'Loading users...' : 'No users found matching your criteria.'}
                       </td>
                     </tr>
-                  ) : currentUsers.map((user, index) => (
+                  ) : currentUsers.map((user) => (
                     <tr key={user.id} className="border-b border-gray-100 bg-white hover:bg-gray-50/50 transition-colors">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">

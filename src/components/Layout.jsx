@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, collection, query, where, getDocs, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, getDocs, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 
 // Helper function to get initials from name
@@ -34,8 +34,8 @@ const Layout = ({ children, title, titleBadge, headerActions }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [activeMenu, setActiveMenu] = useState('');
+  
+  const activeMenu = location.pathname;
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
   // Get user data from Firestore
@@ -48,9 +48,7 @@ const Layout = ({ children, title, titleBadge, headerActions }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    setActiveMenu(location.pathname);
-  }, [location.pathname]);
+
 
   useEffect(() => {
     let unsubscribeSnapshot = null;
@@ -143,16 +141,12 @@ const Layout = ({ children, title, titleBadge, headerActions }) => {
     { name: 'My Profile', path: '/settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z', iconBg: '#64748b' },
   ];
 
-  const notifications = [
-    { id: 1, message: 'New lab results uploaded', time: '2 min ago', unread: true, icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-    { id: 2, message: 'Risk assessment completed', time: '1 hour ago', unread: true, icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
-    { id: 3, message: 'Monthly health report ready', time: '1 day ago', unread: false, icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-  ];
+  
 
   return (
     <div className="min-h-screen bg-white">
       {/* Top Navbar */}
-      <header className="fixed top-0 left-0 right-0 z-[100] border-b border-[#263B6A]/30 shadow-[0_2px_8px_rgba(0,0,0,0.18)]" style={{ backgroundColor: '#263B6A' }}>
+      <header className="fixed top-0 left-0 right-0 z-100 border-b border-[#263B6A]/30 shadow-[0_2px_8px_rgba(0,0,0,0.18)]" style={{ backgroundColor: '#263B6A' }}>
         <div className="flex items-center justify-between px-4 lg:px-6 py-3">
           {/* Left - Logo & Burger Menu */}
           <div className="flex items-center gap-4">
@@ -288,7 +282,7 @@ const Layout = ({ children, title, titleBadge, headerActions }) => {
       </header>
 
       {/* Desktop Sidebar - Collapsible */}
-      <aside className={`hidden lg:flex pt-4 flex-col fixed left-0 top-[60px] bottom-0 z-40 bg-white border-r border-gray-200 transition-all duration-300 ${sidebarWidth}`}>
+      <aside className={`hidden lg:flex pt-4 flex-col fixed left-0 top-15 bottom-0 z-40 bg-white border-r border-gray-200 transition-all duration-300 ${sidebarWidth}`}>
 
         <div className="flex-1 overflow-y-auto py-4 px-3">
           <nav className="space-y-2">
@@ -300,7 +294,7 @@ const Layout = ({ children, title, titleBadge, headerActions }) => {
                 style={activeMenu === item.path ? { backgroundColor: '#263B6A' } : {}}
                 title={sidebarCollapsed ? item.name : ''}
               >
-                <div className={`w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center transition-all`} style={{ backgroundColor: activeMenu === item.path ? 'rgba(255,255,255,0.2)' : item.iconBg + '20' }}>
+                <div className={`w-11 h-11 rounded-xl shrink-0 flex items-center justify-center transition-all`} style={{ backgroundColor: activeMenu === item.path ? 'rgba(255,255,255,0.2)' : item.iconBg + '20' }}>
                   <svg className="w-5 h-5" style={{ color: activeMenu === item.path ? 'white' : item.iconBg }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
                   </svg>
@@ -314,7 +308,7 @@ const Layout = ({ children, title, titleBadge, headerActions }) => {
 
       {/* Mobile Sidebar - Slides in */}
       <aside
-        className={`lg:hidden fixed left-0 top-[60px] bottom-0 pt-4 z-40 bg-white border-r border-gray-200 w-72 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`lg:hidden fixed left-0 top-15 bottom-0 pt-4 z-40 bg-white border-r border-gray-200 w-72 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
 
@@ -335,7 +329,7 @@ const Layout = ({ children, title, titleBadge, headerActions }) => {
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full" style={{ backgroundColor: '#547792' }}></div>
                 )}
                 <div
-                  className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110`}
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110`}
                   style={{ backgroundColor: activeMenu === item.path ? 'rgba(255,255,255,0.2)' : item.iconBg + '20' }}
                 >
                   <svg
@@ -363,9 +357,9 @@ const Layout = ({ children, title, titleBadge, headerActions }) => {
         ></div>
       )}
 
-      <main className={`pt-[60px] transition-all duration-300 ${mainMargin}`} style={{ backgroundColor: 'white' }}>
+      <main className={`pt-15 transition-all duration-300 ${mainMargin}`} style={{ backgroundColor: 'white' }}>
         {title && (
-          <div className="bg-slate-100/100 border-b border-slate-200/80 pt-10 sm:pt-10 pb-1 sm:pb-5 px-4 sm:px-8 lg:px-10 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
+          <div className="bg-slate-100 border-b border-slate-200/80 pt-10 sm:pt-10 pb-1 sm:pb-5 px-4 sm:px-8 lg:px-10 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
             <div className="flex items-center justify-between w-full md:flex-1 gap-3 sm:gap-4 min-w-0">
               <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                 <div className="h-6 w-1 bg-blue-600 rounded-full shrink-0"></div>

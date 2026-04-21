@@ -5,7 +5,7 @@ import CustomSelect from '../components/CustomSelect';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import {
-  collection, getDocs, query, orderBy, deleteDoc, doc
+  collection, getDocs, query, deleteDoc, doc
 } from 'firebase/firestore';
 import axios from 'axios';
 
@@ -289,12 +289,7 @@ const Reports = () => {
     { label: 'Custom Range', value: 'custom' }
   ];
 
-  const summaryStats = {
-    total: filteredReports.length,
-    analyzed: filteredReports.filter(r => r.status === 'Analyzed').length,
-    pending: filteredReports.filter(r => r.status === 'Pending').length,
-    critical: filteredReports.filter(r => r.risks >= 3).length,
-  };
+  
 
   const handleShareViaWhatsApp = (report) => {
     const message = `*Health Report Details*\n\n*Report Name:* ${report.name}\n*Category:* ${report.category}\n*Date:* ${report.date}\n*Status:* ${report.status}\n${report.riskAssessment ? `\n*Risk Assessment:* ${report.riskAssessment}` : ''}\n${report.diagnosis ? `\n*Diagnosis:* ${report.diagnosis}` : ''}\n${report.advice ? `\n*Advice:* ${report.advice}` : ''}\n\nShared from Healthcare App`;

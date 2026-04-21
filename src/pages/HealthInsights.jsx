@@ -3,7 +3,7 @@ import { useSearchParams, useLocation, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query} from 'firebase/firestore';
 
 const HealthInsights = () => {
   const [searchParams] = useSearchParams();
@@ -18,14 +18,12 @@ const HealthInsights = () => {
   const [advice, setAdvice] = useState([]);
   const initialTab = location.pathname === '/diagnosis' ? 'diagnosis' : 'risk';
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [animatedScores, setAnimatedScores] = useState({});
+
   const [userReports, setUserReports] = useState([]);
-  const [reportsData, setReportsData] = useState([]); // [{id, report, riskData, diagnoses, advice}]
   const [selectedReportId, setSelectedReportId] = useState(reportId || '');
   const [isDatasetOpen, setIsDatasetOpen] = useState(false);
   const datasetRef = useRef(null);
   const hasReports = userReports.length > 0;
-  const hasSelectedData = !!reportData;
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => setCurrentUser(u));
@@ -141,7 +139,7 @@ const HealthInsights = () => {
           };
         });
 
-        setReportsData(processed);
+
 
         // Final UI State Update
         const active = processed.find(p => p.id === currentId) || processed[0];
@@ -157,20 +155,7 @@ const HealthInsights = () => {
     fetchReportsAndData();
   }, [currentUser, selectedReportId, reportId]);
 
-  useEffect(() => {
-    if (riskData.length === 0) return;
-    const intervals = [];
-    riskData.forEach(risk => {
-      let cur = 0;
-      const iv = setInterval(() => {
-        cur += 1;
-        setAnimatedScores(prev => ({ ...prev, [risk.id]: Math.min(cur, risk.score) }));
-        if (cur >= risk.score) clearInterval(iv);
-      }, 15);
-      intervals.push(iv);
-    });
-    return () => intervals.forEach(clearInterval);
-  }, [riskData]);
+
 
   const summaryStats = {
     normal: riskData.filter(r => r.status === 'Normal').length,
@@ -178,11 +163,7 @@ const HealthInsights = () => {
     critical: riskData.filter(r => r.status === 'Critical').length,
   };
 
-  const getOverallRisk = () => {
-    if (summaryStats.critical > 0) return 'High';
-    if (summaryStats.borderline > 0) return 'Moderate';
-    return 'Low';
-  };
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -193,14 +174,7 @@ const HealthInsights = () => {
     }
   };
 
-  const getProgressColor = (status) => {
-    switch (status) {
-      case 'Critical': return '#dc2626';
-      case 'Borderline': return '#d97706';
-      case 'Normal': return '#16a34a';
-      default: return '#6b7280';
-    }
-  };
+
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -334,7 +308,6 @@ const HealthInsights = () => {
                       <div className="grid grid-cols-1 gap-6 mb-10">
                         {riskData.map((risk) => {
                           const statusStyle = getStatusColor(risk.status);
-                          const score = animatedScores[risk.id] || 0;
                           return (
                             <div key={risk.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:border-[#263B6A]/30 transition-all duration-300 group">
                               <div className="p-6">

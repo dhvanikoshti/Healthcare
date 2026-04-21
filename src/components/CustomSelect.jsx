@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 const CustomSelect = ({
@@ -18,7 +18,7 @@ const CustomSelect = ({
   const containerRef = useRef(null);
   const menuRef = useRef(null);
 
-  const updatePosition = () => {
+  const updatePosition = useCallback(() => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const menuWidth = compact ? Math.max(rect.width, 60) : Math.min(Math.max(rect.width, 160), 250); // Better estimate
@@ -51,19 +51,26 @@ const CustomSelect = ({
         width: rect.width
       });
     }
-  };
+  }, [compact, options.length]);
 
   useEffect(() => {
     if (isOpen) {
-      updatePosition();
+      // Use requestAnimationFrame to avoid synchronous setState in effect warning
+      // and ensure the DOM is ready for measurement
+      const handle = requestAnimationFrame(() => {
+        updatePosition();
+      });
+      
       window.addEventListener('scroll', updatePosition, true);
       window.addEventListener('resize', updatePosition);
+      
+      return () => {
+        cancelAnimationFrame(handle);
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
     }
-    return () => {
-      window.removeEventListener('scroll', updatePosition, true);
-      window.removeEventListener('resize', updatePosition);
-    };
-  }, [isOpen]);
+  }, [isOpen, updatePosition]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -94,7 +101,7 @@ const CustomSelect = ({
     <>
       {/* Invisible backdrop to capture clicks */}
       <div
-        className="fixed inset-0 z-[9998]"
+        className="fixed inset-0 z-9998"
         onClick={() => setIsOpen(false)}
       />
 
@@ -113,8 +120,8 @@ const CustomSelect = ({
         }}
         className=""
       >
-        <div className={`bg-white shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] overflow-hidden bg-white/98 rounded-2xl border border-gray-100 ${isOpenUp ? 'mb-2' : 'mt-0'}`}>
-          <div className="max-h-[300px] overflow-y-auto custom-scrollbar py-2">
+        <div className={`shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] overflow-hidden bg-white/98 rounded-2xl border border-gray-100 ${isOpenUp ? 'mb-2' : 'mt-0'}`}>
+          <div className="max-h-75 overflow-y-auto custom-scrollbar py-2">
             {options.map((option, index) => {
               const optLabel = typeof option === 'string' ? option : option.label;
               const optValue = typeof option === 'string' ? option : option.value;

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query } from 'firebase/firestore';
 
 const TrendAnalysis = () => {
   const [hasReports, setHasReports] = useState(false);
@@ -136,7 +136,6 @@ const TrendAnalysis = () => {
 
 
 
-  const latestReport = selectedReports[selectedReports.length - 1];
 
   // Automatic View Switching based on selection count (Only when count definitively changes)
   const prevCount = useRef(0);
@@ -886,7 +885,7 @@ const TrendAnalysis = () => {
                           const d = payload[0].payload;
                           const isHigh = d.refMax !== null && d.value > d.refMax;
                           const isLow = d.refMin !== null && d.value < d.refMin;
-                          const isNormal = !isHigh && !isLow && d.value !== null;
+                          
                           return (
                             <div className="bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-5 shadow-2xl ring-1 ring-black/5 min-w-[160px]">
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{d.reportName}</p>

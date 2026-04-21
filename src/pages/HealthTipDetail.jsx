@@ -3,14 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { doc, getDoc, collection, getDocs, query, limit, orderBy } from 'firebase/firestore';
 import Layout from '../components/Layout';
-import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
 const HealthTipDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [tip, setTip] = useState(null);
-  const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const [relatedTips, setRelatedTips] = useState([]);

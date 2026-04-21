@@ -16,7 +16,6 @@ const UploadReport = () => {
   const [uploadProgress, setUploadProgress] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [uploadError, setUploadError] = useState(null);
   const [recentReports, setRecentReports] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,18 +69,20 @@ const UploadReport = () => {
 
   const handleUpload = useCallback(async (file) => {
     if (!currentUser) {
-      setUploadError('You must be logged in to upload reports.');
+      setToastMsg('Error: You must be logged in to upload reports.');
+      setTimeout(() => setToastMsg(''), 4000);
       return;
     }
     if (!file) return;
 
     const maxMB = 10;
     if (file.size > maxMB * 1024 * 1024) {
-      setUploadError(`File too large. Please upload a file under ${maxMB} MB.`);
+      setToastMsg(`Error: File too large. Please upload a file under ${maxMB} MB.`);
+      setTimeout(() => setToastMsg(''), 4000);
       return;
     }
 
-    setUploadError(null);
+
     setUploadProgress(0);
     setUploadSuccess(false);
 
@@ -125,7 +126,7 @@ const UploadReport = () => {
         if (n8nResponse.status === 200) {
           let rawData = n8nResponse.data;
           if (typeof rawData === 'string') {
-            try { rawData = JSON.parse(rawData); } catch (e) { console.warn('Non-JSON response'); }
+            try { rawData = JSON.parse(rawData); } catch { console.warn('Non-JSON response'); }
           }
           if (rawData) {
             setUploadProgress(85);
@@ -160,7 +161,8 @@ const UploadReport = () => {
 
     } catch (err) {
       console.error('Upload error:', err);
-      setUploadError(err.message || 'Failed to upload report.');
+      setToastMsg('Error: ' + (err.message || 'Failed to upload report.'));
+      setTimeout(() => setToastMsg(''), 4000);
     } finally {
       setTimeout(() => {
         setUploadProgress(null);
@@ -203,7 +205,7 @@ const UploadReport = () => {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       setToastMsg(`Successfully downloaded ${report.name.substring(0, 15)}...`);
-    } catch (error) {
+    } catch {
       window.open(report.fileData, '_blank');
       setToastMsg('Opening report in new tab for download...');
     } finally { setTimeout(() => setToastMsg(''), 4000); }
@@ -263,7 +265,7 @@ const UploadReport = () => {
           const response = await axios.get(viewReport.fileData, { responseType: 'blob' });
           const blob = response.data;
           setBlobUrl(URL.createObjectURL(blob));
-        } catch (err) { setBlobUrl(viewReport.fileData); }
+        } catch { setBlobUrl(viewReport.fileData); }
         finally { setIsViewerLoading(false); }
       } else if (viewReport.type === 'image') {
         setBlobUrl(viewReport.fileData);
