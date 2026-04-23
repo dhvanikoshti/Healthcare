@@ -487,41 +487,32 @@ const AdminDashboard = () => {
               </div>
 
               {mode === 'single' && (
-                <select
-                  value={year1}
-                  onChange={(e) => setYear1(Number(e.target.value))}
-                  className="shrink-0 appearance-none text-[10px] sm:text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg px-1.5 py-1 sm:py-1.5 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#547792]/40 focus:border-[#547792]"
-                  style={{ width: '56px' }}
-                >
-                  {years.map(y => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  options={years.map(y => y.toString())}
+                  value={year1.toString()}
+                  onChange={(v) => setYear1(Number(v))}
+                  compact={true}
+                  className="w-[70px] sm:w-[80px]"
+                />
               )}
 
               {mode === 'compare' && (
-                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                  <select
-                    value={year1}
-                    onChange={(e) => setYear1(Number(e.target.value))}
-                    className="shrink-0 appearance-none text-[10px] sm:text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg px-1.5 py-1 sm:py-1.5 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#547792]/40 focus:border-[#547792]"
-                    style={{ width: '56px' }}
-                  >
-                    {years.map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  <CustomSelect
+                    options={years.map(y => y.toString())}
+                    value={year1.toString()}
+                    onChange={(v) => setYear1(Number(v))}
+                    compact={true}
+                    className="w-[70px] sm:w-[80px]"
+                  />
                   <span className="text-gray-400 font-bold text-[9px] sm:text-xs uppercase shrink-0">vs</span>
-                  <select
-                    value={year2}
-                    onChange={(e) => setYear2(Number(e.target.value))}
-                    className="shrink-0 appearance-none text-[10px] sm:text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg px-1.5 py-1 sm:py-1.5 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#547792]/40 focus:border-[#547792]"
-                    style={{ width: '56px' }}
-                  >
-                    {years.map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    options={years.map(y => y.toString())}
+                    value={year2.toString()}
+                    onChange={(v) => setYear2(Number(v))}
+                    compact={true}
+                    className="w-[70px] sm:w-[80px]"
+                  />
                 </div>
               )}
             </div>

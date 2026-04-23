@@ -331,7 +331,7 @@ const Reports = () => {
     >
       <div className="space-y-8">
         {/* Search & Filters */}
-        <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 mb-8">
+        <div className="bg-white rounded-[1.5rem] sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-slate-100 mb-8">
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
               <input
@@ -339,7 +339,7 @@ const Reports = () => {
                 placeholder="Search reports by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-3 pl-12 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all font-medium text-slate-700"
+                className="w-full px-4 py-2.5 sm:py-3 pl-12 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all font-medium text-slate-700 text-sm sm:text-base"
               />
               <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -351,6 +351,7 @@ const Reports = () => {
                 value={categoryFilter}
                 onChange={(val) => setCategoryFilter(val)}
                 placeholder="All Categories"
+                compact={true}
                 className="flex-1 lg:w-56"
               />
               <CustomSelect
@@ -358,6 +359,7 @@ const Reports = () => {
                 value={dateFilter}
                 onChange={(val) => setDateFilter(val)}
                 placeholder="All Dates"
+                compact={true}
                 className="flex-1 lg:w-56"
               />
               {dateFilter === 'custom' && (

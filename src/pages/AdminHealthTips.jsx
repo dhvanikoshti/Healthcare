@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 import AdminLayout from '../components/AdminLayout';
@@ -396,9 +396,9 @@ const AdminHealthTips = () => {
 
             <button
               onClick={() => handleOpenModal('add')}
-              className="px-6 py-2.5 bg-[#263B6A] text-white font-bold rounded-xl shadow-md hover:bg-[#1f3057] hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap flex-1 lg:flex-none"
+              className="px-4 sm:px-6 py-2.5 bg-[#263B6A] text-white font-bold rounded-xl shadow-md hover:bg-[#1f3057] hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap flex-1 lg:flex-none text-xs sm:text-base"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
               Add New Tip
@@ -703,7 +703,7 @@ const AdminHealthTips = () => {
                   placeholder="Search health tips..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-100 rounded-xl text-sm sm:text-base font-medium placeholder-gray-400 focus:outline-none focus:border-[#263B6A] transition-all"
+                  className="w-full pl-12 pr-4 py-2.5 sm:py-3 bg-white border-2 border-gray-100 rounded-xl text-sm sm:text-base font-medium placeholder-gray-400 focus:outline-none focus:border-[#263B6A] transition-all"
                 />
                 <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -716,6 +716,7 @@ const AdminHealthTips = () => {
                   value={categoryFilter}
                   onChange={(cat) => setCategoryFilter(cat)}
                   placeholder="All Categories"
+                  compact={true}
                   className="!shadow-none"
                 />
               </div>
