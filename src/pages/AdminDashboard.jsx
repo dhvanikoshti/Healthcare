@@ -349,7 +349,7 @@ const AdminDashboard = () => {
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-12 h-12 md:w-14 md:h-14 bg-cyan-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:rotate-6 transition-transform duration-500">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-sky-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:rotate-6 transition-transform duration-500">
                   <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                 </div>
                 <div>
@@ -367,14 +367,22 @@ const AdminDashboard = () => {
               {/* Left Column: Reliability Gauge */}
               <div className="lg:col-span-4 flex flex-col items-center justify-center p-6 bg-slate-50/50 rounded-[2rem] border border-slate-100 shadow-inner">
                 <div className="w-28 h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 relative flex items-center justify-center">
-                  <svg className="w-full h-full -rotate-90">
-                    <circle cx="50%" cy="50%" r="42%" className="stroke-slate-200/50 fill-none stroke-[10] md:stroke-[12]" />
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    {/* Background Circle */}
+                    <circle cx="50" cy="50" r="42" className="stroke-slate-100 fill-none stroke-[10]" />
+                    
+                    {/* 100% Stability Fill Effect */}
+                    {stats.reliabilityScore === 100 && (
+                      <circle cx="50" cy="50" r="42" className="fill-sky-400/10 animate-pulse transition-all duration-700" />
+                    )}
+
+                    {/* Progress Circle */}
                     <circle
-                      cx="50%" cy="50%" r="42%"
-                      className={`${stats.reliabilityScore > 80 ? 'stroke-cyan-500' : 'stroke-amber-500'} fill-none transition-all duration-1000 ease-out stroke-[10] md:stroke-[12]`}
+                      cx="50" cy="50" r="42"
+                      className={`${stats.reliabilityScore > 80 ? 'stroke-sky-500' : 'stroke-amber-500'} fill-none transition-all duration-1000 ease-out stroke-[10]`}
                       strokeDasharray="264"
                       strokeDashoffset={264 - (264 * stats.reliabilityScore) / 100}
-                      strokeLinecap="round"
+                      strokeLinecap={stats.reliabilityScore === 100 ? 'butt' : 'round'}
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -385,7 +393,7 @@ const AdminDashboard = () => {
                 <div className="mt-6 text-center">
                   <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Global Extraction Health</p>
                   <div className="flex items-center gap-2 mt-2 justify-center">
-                    <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+                    <span className="w-2 h-2 rounded-full bg-sky-500"></span>
                     <span className="text-[10px] font-bold text-slate-400 italic">Auditing {stats.successfulReports + stats.failedReports} recent pulses</span>
                   </div>
                 </div>
