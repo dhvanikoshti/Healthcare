@@ -3,7 +3,7 @@ import Layout from '../components/Layout';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import {
-  collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp, updateDoc
+  collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp, updateDoc, increment
 } from 'firebase/firestore';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import axios from 'axios';
@@ -140,6 +140,14 @@ const UploadReport = () => {
                 category: analyzedCategory,
                 status: 'Analyzed'
               });
+
+              // Increment persistent successful execution counter
+              await updateDoc(doc(db, 'metadata', 'stats'), {
+                totalSuccessful: increment(1)
+              }).catch(() => {
+                // If doc doesn't exist (initial state handled by Dashboard), this might fail silently
+                // or we could create it here if we wanted to be extra safe.
+              });
             } else {
               throw new Error("Invalid response format from AI Engine");
             }
@@ -152,6 +160,11 @@ const UploadReport = () => {
         await updateDoc(doc(db, 'users', currentUser.uid, 'reports', docRef.id), {
           status: 'Failed'
         });
+        // Increment persistent failed execution counter
+        await updateDoc(doc(db, 'metadata', 'stats'), {
+          totalFailed: increment(1),
+          'failureReasons.incompleteResults': increment(1) // Generalizing failure as incomplete for global stats
+        }).catch(() => {});
         throw new Error('Could not connect to AI Engine. Is n8n running on port 5678?');
       }
 
@@ -512,7 +525,7 @@ const UploadReport = () => {
       )}
 
       {viewReport && (
-        <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in">
+        <div className="fixed inset-0 z-[110] bg-white flex flex-col animate-in fade-in">
           <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-100 bg-white shadow-sm">
             <div className="flex items-center gap-4">
               <button onClick={() => setViewReport(null)} className="p-2.5 hover:bg-gray-100 rounded-2xl transition-colors">

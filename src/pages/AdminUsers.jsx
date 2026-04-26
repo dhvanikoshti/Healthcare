@@ -567,7 +567,7 @@ const AdminUsers = () => {
       )}
       {/* Full Screen Image Modal */}
       {isFullImageView && previewImageUrl && (
-        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-fade-in backdrop-blur-sm">
+        <div className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center animate-fade-in backdrop-blur-sm">
           <button
             onClick={() => {
               setIsFullImageView(false);

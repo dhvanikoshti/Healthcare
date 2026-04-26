@@ -1,57 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import demoVideo from '../assets/Demo_Recording.mp4';
 
 const Landing = () => {
   const [openFaq, setOpenFaq] = useState(null);
   const [showDemo, setShowDemo] = useState(false);
-  const [demoStep, setDemoStep] = useState(0);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const demoSteps = [
-    {
-      title: "Upload Your Health Reports",
-      desc: "Start by uploading your medical reports, lab results, or health documents",
-      image: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800&q=80",
-      highlight: "📄 Upload PDF, Images, or Documents"
-    },
-    {
-      title: "AI Analysis in Progress",
-      desc: "Our advanced AI analyzes your health data to extract meaningful insights",
-      image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80",
-      highlight: "🔬 Processing Health Metrics..."
-    },
-    {
-      title: "View Comprehensive Reports",
-      desc: "Get detailed reports with charts, trends, and risk assessments",
-      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80",
-      highlight: "📊 Health Dashboard & Analytics"
-    },
-    {
-      title: "AI Chat Assistance",
-      desc: "Interact with our AI chatbot to get answers about your health questions",
-      image: "https://images.unsplash.com/photo-1535378917042-10a22c95931a?w=800&q=80",
-      highlight: "💬 24/7 AI Health Assistant"
-    }
-  ];
 
-  const startDemo = () => {
-    setShowDemo(true);
-    setDemoStep(0);
-  };
-
-  const nextStep = () => {
-    if (demoStep < demoSteps.length - 1) {
-      setDemoStep(demoStep + 1);
-    } else {
-      setShowDemo(false);
-    }
-  };
-
-  const prevStep = () => {
-    if (demoStep > 0) {
-      setDemoStep(demoStep - 1);
-    }
-  };
 
   const features = [
     {
@@ -181,7 +138,7 @@ const Landing = () => {
               </p>
               <div className="mt-10 sm:mt-40 md:mt-8 lg:mt-10 flex flex-row gap-3 sm:gap-4 lg:gap-6 items-center justify-end">
                 <Link to="/register" className="flex-1 md:flex-none text-center px-4 sm:px-6 lg:px-7 py-2 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg shadow-lg hover:scale-105 transition transform whitespace-nowrap" style={{ backgroundColor: '#547792' }}>Start Free Trial</Link>
-                <button onClick={startDemo} className="flex-1 md:flex-none px-4 sm:px-6 lg:px-7 py-2 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg border-2 border-white/30 hover:bg-white/10 transition whitespace-nowrap">Watch Demo</button>
+                <button onClick={() => setShowDemo(true)} className="flex-1 md:flex-none px-4 sm:px-6 lg:px-7 py-2 sm:py-3 lg:py-3.5 rounded-xl text-white font-bold text-sm sm:text-base lg:text-lg border-2 border-white/30 hover:bg-white/10 transition whitespace-nowrap">Watch Demo</button>
               </div>
             </div>
           </div>
@@ -311,85 +268,31 @@ const Landing = () => {
 
       {/* Demo Modal */}
       {showDemo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+          <div className="relative w-full max-w-5xl aspect-video bg-black rounded-3xl shadow-2xl overflow-hidden border border-white/10">
             <button
               onClick={() => setShowDemo(false)}
-              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition"
+              className="absolute top-4 right-4 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all backdrop-blur-md border border-white/20 group"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            <div className="flex gap-2 p-4 bg-white">
-              {demoSteps.map((_, idx) => (
-                <div
-                  key={idx}
-                  className={`h-1 flex-1 rounded-full transition-all duration-300 ${idx <= demoStep ? 'bg-[#263B6A]' : 'bg-gray-200'}`}
-                />
-              ))}
-            </div>
-
-            <div className="grid md:grid-cols-2">
-              <div className="p-8 flex flex-col justify-center">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="px-3 py-1 bg-[#263B6A]/10 text-[#263B6A] text-sm font-medium rounded-full">
-                    Step {demoStep + 1} of {demoSteps.length}
-                  </span>
-                </div>
-                <h3 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">
-                  {demoSteps[demoStep].title}
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  {demoSteps[demoStep].desc}
-                </p>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#263B6A]/10 text-[#263B6A] rounded-lg font-medium">
-                  {demoSteps[demoStep].highlight}
-                </div>
-              </div>
-              <div className="relative h-64 md:h-auto">
-                <img
-                  src={demoSteps[demoStep].image}
-                  alt={demoSteps[demoStep].title}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent md:from-transparent md:bg-gradient-to-r md:from-black/30 md:to-transparent" />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-6 bg-white border-t">
-              <button
-                onClick={prevStep}
-                disabled={demoStep === 0}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition ${demoStep === 0
-                  ? 'text-gray-400 cursor-not-allowed'
-                  : 'text-gray-700 hover:bg-gray-200'
-                  }`}
+            <div className="w-full h-full">
+              <video
+                src={demoVideo}
+                className="w-full h-full object-contain"
+                controls
+                autoPlay
+                playsInline
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Previous
-              </button>
-              <div className="flex gap-2">
-                {demoSteps.map((_, idx) => (
-                  <div
-                    key={idx}
-                    className={`w-2 h-2 rounded-full transition-all ${idx === demoStep ? 'w-6 bg-[#263B6A]' : 'bg-gray-300'}`}
-                  />
-                ))}
-              </div>
-              <button
-                onClick={nextStep}
-                className="flex items-center gap-2 px-6 py-2.5 bg-[#263B6A] text-white rounded-xl font-medium hover:bg-[#2a4a7f] transition shadow-lg hover:shadow-xl"
-              >
-                {demoStep === demoSteps.length - 1 ? 'Finish' : 'Next'}
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
+                Your browser does not support the video tag.
+              </video>
             </div>
+            
+            {/* Overlay Gradient for premium feel */}
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/20 via-transparent to-black/20" />
           </div>
         </div>
       )}

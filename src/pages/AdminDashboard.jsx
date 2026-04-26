@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import AdminLayout from '../components/AdminLayout';
-import { collection, getDocs, query, limit, collectionGroup } from 'firebase/firestore';
+import { collection, getDocs, query, limit, collectionGroup, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import CustomSelect from '../components/CustomSelect';
 
@@ -53,27 +53,53 @@ const AdminDashboard = () => {
         const reportsRef = collectionGroup(db, 'reports');
         const reportsSnapshot = await getDocs(query(reportsRef, limit(1000)));
 
-        let totalReports = reportsSnapshot.size;
+        // ─── PERSISTENT STATS LOGIC ───
+        // We read from a persistent stats document to ensure counts don't decrease on deletion
+        const statsDocRef = doc(db, 'metadata', 'stats');
+        const statsDocSnap = await getDoc(statsDocRef);
+
         let successfulAnalysis = 0;
         let failedAnalysis = 0;
+        let totalReports = 0;
         let reasonCounts = { missingAnalysis: 0, incompleteResults: 0 };
 
-        reportsSnapshot.forEach(doc => {
-          const data = doc.data();
-          // A report is "Success" if it has an analysis object with valid summary/health/risks
-          const hasValidAnalysis = data.analysis && (data.analysis.summary || data.analysis.overall_health || data.analysis.risks);
+        if (statsDocSnap.exists()) {
+          const sData = statsDocSnap.data();
+          successfulAnalysis = sData.totalSuccessful || 0;
+          failedAnalysis = sData.totalFailed || 0;
+          totalReports = successfulAnalysis + failedAnalysis;
+          reasonCounts = sData.failureReasons || { missingAnalysis: 0, incompleteResults: 0 };
+        } else {
+          // INITIALIZATION: If no stats doc exists, calculate from current data and save it
+          let currentSuccess = 0;
+          let currentFailed = 0;
+          let currentReasons = { missingAnalysis: 0, incompleteResults: 0 };
 
-          if (hasValidAnalysis) {
-            successfulAnalysis++;
-          } else {
-            failedAnalysis++;
-            if (!data.analysis) {
-              reasonCounts.missingAnalysis++;
+          reportsSnapshot.forEach(doc => {
+            const data = doc.data();
+            const hasValidAnalysis = data.analysis && (data.analysis.summary || data.analysis.overall_health || data.analysis.risks);
+            if (hasValidAnalysis) {
+              currentSuccess++;
             } else {
-              reasonCounts.incompleteResults++;
+              currentFailed++;
+              if (!data.analysis) currentReasons.missingAnalysis++;
+              else currentReasons.incompleteResults++;
             }
-          }
-        });
+          });
+
+          successfulAnalysis = currentSuccess;
+          failedAnalysis = currentFailed;
+          totalReports = currentSuccess + currentFailed;
+          reasonCounts = currentReasons;
+
+          // Save for future use
+          await setDoc(statsDocRef, {
+            totalSuccessful: currentSuccess,
+            totalFailed: currentFailed,
+            failureReasons: currentReasons,
+            initializedAt: new Date().toISOString()
+          });
+        }
 
         const reliabilityScore = totalReports > 0 ? Math.round((successfulAnalysis / totalReports) * 100) : 100;
 
@@ -349,7 +375,7 @@ const AdminDashboard = () => {
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-12 h-12 md:w-14 md:h-14 bg-cyan-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:rotate-6 transition-transform duration-500">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-sky-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:rotate-6 transition-transform duration-500">
                   <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                 </div>
                 <div>
@@ -367,14 +393,22 @@ const AdminDashboard = () => {
               {/* Left Column: Reliability Gauge */}
               <div className="lg:col-span-4 flex flex-col items-center justify-center p-6 bg-slate-50/50 rounded-[2rem] border border-slate-100 shadow-inner">
                 <div className="w-28 h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 relative flex items-center justify-center">
-                  <svg className="w-full h-full -rotate-90">
-                    <circle cx="50%" cy="50%" r="42%" className="stroke-slate-200/50 fill-none stroke-[10] md:stroke-[12]" />
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    {/* Background Circle */}
+                    <circle cx="50" cy="50" r="42" className="stroke-slate-100 fill-none stroke-[10]" />
+                    
+                    {/* 100% Stability Fill Effect */}
+                    {stats.reliabilityScore === 100 && (
+                      <circle cx="50" cy="50" r="42" className="fill-sky-400/10 animate-pulse transition-all duration-700" />
+                    )}
+
+                    {/* Progress Circle */}
                     <circle
-                      cx="50%" cy="50%" r="42%"
-                      className={`${stats.reliabilityScore > 80 ? 'stroke-cyan-500' : 'stroke-amber-500'} fill-none transition-all duration-1000 ease-out stroke-[10] md:stroke-[12]`}
+                      cx="50" cy="50" r="42"
+                      className={`${stats.reliabilityScore > 80 ? 'stroke-sky-500' : 'stroke-amber-500'} fill-none transition-all duration-1000 ease-out stroke-[10]`}
                       strokeDasharray="264"
                       strokeDashoffset={264 - (264 * stats.reliabilityScore) / 100}
-                      strokeLinecap="round"
+                      strokeLinecap={stats.reliabilityScore === 100 ? 'butt' : 'round'}
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -385,7 +419,7 @@ const AdminDashboard = () => {
                 <div className="mt-6 text-center">
                   <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Global Extraction Health</p>
                   <div className="flex items-center gap-2 mt-2 justify-center">
-                    <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+                    <span className="w-2 h-2 rounded-full bg-sky-500"></span>
                     <span className="text-[10px] font-bold text-slate-400 italic">Auditing {stats.successfulReports + stats.failedReports} recent pulses</span>
                   </div>
                 </div>
@@ -487,41 +521,32 @@ const AdminDashboard = () => {
               </div>
 
               {mode === 'single' && (
-                <select
-                  value={year1}
-                  onChange={(e) => setYear1(Number(e.target.value))}
-                  className="shrink-0 appearance-none text-[10px] sm:text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg px-1.5 py-1 sm:py-1.5 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#547792]/40 focus:border-[#547792]"
-                  style={{ width: '56px' }}
-                >
-                  {years.map(y => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  options={years.map(y => y.toString())}
+                  value={year1.toString()}
+                  onChange={(v) => setYear1(Number(v))}
+                  compact={true}
+                  className="w-[70px] sm:w-[80px]"
+                />
               )}
 
               {mode === 'compare' && (
-                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                  <select
-                    value={year1}
-                    onChange={(e) => setYear1(Number(e.target.value))}
-                    className="shrink-0 appearance-none text-[10px] sm:text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg px-1.5 py-1 sm:py-1.5 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#547792]/40 focus:border-[#547792]"
-                    style={{ width: '56px' }}
-                  >
-                    {years.map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  <CustomSelect
+                    options={years.map(y => y.toString())}
+                    value={year1.toString()}
+                    onChange={(v) => setYear1(Number(v))}
+                    compact={true}
+                    className="w-[70px] sm:w-[80px]"
+                  />
                   <span className="text-gray-400 font-bold text-[9px] sm:text-xs uppercase shrink-0">vs</span>
-                  <select
-                    value={year2}
-                    onChange={(e) => setYear2(Number(e.target.value))}
-                    className="shrink-0 appearance-none text-[10px] sm:text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg px-1.5 py-1 sm:py-1.5 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#547792]/40 focus:border-[#547792]"
-                    style={{ width: '56px' }}
-                  >
-                    {years.map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    options={years.map(y => y.toString())}
+                    value={year2.toString()}
+                    onChange={(v) => setYear2(Number(v))}
+                    compact={true}
+                    className="w-[70px] sm:w-[80px]"
+                  />
                 </div>
               )}
             </div>

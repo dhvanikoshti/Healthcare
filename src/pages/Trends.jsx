@@ -1053,7 +1053,7 @@ const TrendAnalysis = () => {
       headerActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           {/* Professional Segmented Toggle - Ultra Upscaled */}
-          <div className="flex bg-slate-100/90 backdrop-blur-md p-1 rounded-[1rem] sm:rounded-[1.25rem] border border-slate-200 shadow-inner overflow-hidden relative w-36 sm:w-60 h-10 sm:h-14">
+          <div className="flex bg-slate-100/90 backdrop-blur-md p-0.5 sm:p-1 rounded-[0.8rem] sm:rounded-[1.25rem] border border-slate-200 shadow-inner overflow-hidden relative w-32 sm:w-60 h-8 sm:h-14">
             <div
               className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-[0.75rem] sm:rounded-[1rem] shadow-sm transition-all duration-300 ease-out z-0 ${viewMode === 'trends' ? 'translate-x-full ml-1' : 'translate-x-0 ml-1'}`}
             ></div>
@@ -1075,7 +1075,7 @@ const TrendAnalysis = () => {
           <div className="relative">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="bg-white border-2 border-slate-200 text-slate-800 h-10 sm:h-14 px-3 sm:px-8 rounded-[1rem] sm:rounded-[1.25rem] font-bold text-xs sm:text-base shadow-sm flex items-center justify-between gap-2 sm:gap-4 min-w-[120px] sm:min-w-[280px] max-w-[160px] sm:max-w-[420px] hover:border-slate-400 transition-all active:scale-95"
+              className="bg-white border-2 border-slate-200 text-slate-800 h-8 sm:h-14 px-2 sm:px-8 rounded-[0.7rem] sm:rounded-[1.25rem] font-bold text-[9px] sm:text-base shadow-sm flex items-center justify-between gap-1 sm:gap-4 min-w-[90px] sm:min-w-[280px] max-w-[130px] sm:max-w-[420px] hover:border-slate-400 transition-all active:scale-95"
             >
               <span className="truncate flex-1 text-left">
                 {selectedReports.length === 1
@@ -1091,12 +1091,12 @@ const TrendAnalysis = () => {
               <>
                 {/* Transparent backdrop for outside clicks */}
                 <div
-                  className="fixed inset-0 z-[110] bg-transparent"
+                  className="fixed inset-0 z-[80] bg-transparent"
                   onClick={() => setIsDropdownOpen(false)}
                 />
 
-                <div className="absolute top-full left-0 sm:left-auto sm:right-0 z-[120] mt-2 w-72 sm:w-80 overflow-hidden bg-white rounded-2xl border border-slate-100 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in duration-200 origin-top-left sm:origin-top-right">
-                  <div className="max-h-[320px] overflow-y-auto custom-scrollbar py-2">
+                <div className="absolute top-full right-0 sm:right-0 z-[90] mt-1 sm:mt-2 w-48 xs:w-56 sm:w-80 overflow-hidden bg-white rounded-xl sm:rounded-2xl border border-slate-100 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in duration-200 origin-top-right">
+                  <div className="max-h-[180px] sm:max-h-[320px] overflow-y-auto custom-scrollbar py-0.5 sm:py-2">
                     {extractedMedicalData.map(report => {
                       const isSelected = selectedReports.some(sr => sr.id === report.id);
                       return (
@@ -1104,22 +1104,22 @@ const TrendAnalysis = () => {
                           key={report.id}
                           type="button"
                           onClick={() => toggleReportSelection(report)}
-                          className={`w-full px-5 py-3 text-left flex items-center justify-between group transition-colors ${isSelected ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}`}
+                          className={`w-full px-2 py-1 sm:px-5 sm:py-3 text-left flex items-center justify-between group transition-colors ${isSelected ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}`}
                         >
                           <div className="min-w-0 flex-1">
-                            <p className={`text-sm font-bold truncate ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>
+                            <p className={`text-[9px] sm:text-sm font-bold truncate ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>
                               {report.reportName}
                             </p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[9px] font-black text-slate-400 tracking-widest uppercase">{report.reportDate}</span>
-                              <span className="text-[8px] font-bold text-indigo-500 bg-indigo-50/50 px-1.5 py-0.5 rounded-md border border-indigo-100/30 uppercase tracking-wider">{report.category}</span>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <span className="text-[7px] font-black text-slate-400 tracking-widest uppercase">{report.reportDate}</span>
+                              <span className="text-[6px] font-bold text-indigo-500 bg-indigo-50/50 px-1 py-0.5 rounded-md border border-indigo-100/30 uppercase tracking-wider">{report.category}</span>
                             </div>
                           </div>
 
                           {isSelected && (
-                            <div className="ml-3 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0">
-                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+                            <div className="ml-2 sm:ml-3 w-4 h-4 sm:w-5 sm:h-5 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0">
+                              <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={5} d="M5 13l4 4L19 7" />
                               </svg>
                             </div>
                           )}
@@ -1129,13 +1129,13 @@ const TrendAnalysis = () => {
                   </div>
 
                   {viewMode === 'trends' && (
-                    <div className="p-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">
+                    <div className="p-2 sm:p-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest px-1.5">
                         {selectedReports.length} Selection
                       </span>
                       <button
                         onClick={() => setIsDropdownOpen(false)}
-                        className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-700"
+                        className="text-[8px] sm:text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-700"
                       >
                         Done
                       </button>

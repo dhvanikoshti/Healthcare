@@ -119,7 +119,7 @@ const AdminLayout = ({ children, title, subtitle, headerActions }) => {
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-[#263B6A]/30 shadow-[0_2px_8px_rgba(0,0,0,0.18)]" style={{ backgroundColor: '#263B6A' }}>
+      <header className="fixed top-0 left-0 right-0 z-[100] border-b border-[#263B6A]/30 shadow-[0_2px_8px_rgba(0,0,0,0.18)]" style={{ backgroundColor: '#263B6A' }}>
         <div className="flex items-center justify-between px-4 lg:px-6 py-3">
           <div className="flex items-center gap-4">
             <button
@@ -253,7 +253,7 @@ const AdminLayout = ({ children, title, subtitle, headerActions }) => {
 
       {/* Full Screen Image Modal */}
       {isFullImageView && userData.profileImage && (
-        <div className="fixed inset-0 z-100 bg-black/95 flex items-center justify-center animate-fade-in backdrop-blur-sm">
+        <div className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center animate-fade-in backdrop-blur-sm">
           <button
             onClick={() => setIsFullImageView(false)}
             className="absolute top-6 right-6 w-12 h-12 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-all transform hover:scale-110 shadow-2xl"

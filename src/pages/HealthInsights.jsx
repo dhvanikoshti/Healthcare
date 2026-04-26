@@ -228,11 +228,11 @@ const HealthInsights = () => {
               <>
                 {/* Transparent backdrop for outside clicks */}
                 <div
-                  className="fixed inset-0 z-[110] bg-transparent"
+                  className="fixed inset-0 z-[80] bg-transparent"
                   onClick={() => setIsDatasetOpen(false)}
                 />
 
-                <div className="absolute top-full right-0 mt-3 w-full min-w-[280px] bg-white rounded-2xl shadow-2xl border border-slate-100 z-[120] animate-in fade-in zoom-in duration-200 flex flex-col max-h-[320px] overflow-hidden origin-top-right">
+                <div className="absolute top-full right-0 mt-3 w-full min-w-[280px] bg-white rounded-2xl shadow-2xl border border-slate-100 z-[90] animate-in fade-in zoom-in duration-200 flex flex-col max-h-[320px] overflow-hidden origin-top-right">
                   <div className="overflow-y-auto custom-scrollbar py-2">
                     {userReports.map((report) => (
                       <button
